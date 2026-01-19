@@ -1,25 +1,25 @@
 {
   "theme": {
-    "name": "Corporate Purple",
+    "name": "Corporate Red",
     "colors": {
-      "primary": "#7B2D8E",
-      "primaryDark": "#5A1F6A",
-      "primaryLight": "#E8D5F0",
-      "secondary": "#D4B8E0",
-      "accent": "#9B4DCA",
+      "primary": "#C8102E",
+      "primaryDark": "#8B0000",
+      "primaryLight": "#FFE5E5",
+      "secondary": "#FFB3B3",
+      "accent": "#E60012",
       "background": "#FFFFFF",
-      "backgroundAlt": "#F8F4FA",
+      "backgroundAlt": "#FFF5F5",
       "text": {
         "dark": "#1A1A1A",
         "medium": "#4A4A4A",
         "light": "#6B6B6B",
         "onPrimary": "#FFFFFF",
-        "highlight": "#7B2D8E"
+        "highlight": "#C8102E"
       },
       "border": {
-        "primary": "#7B2D8E",
-        "light": "#D4B8E0",
-        "dashed": "#9B4DCA"
+        "primary": "#C8102E",
+        "light": "#FFB3B3",
+        "dashed": "#E60012"
       }
     },
     "fonts": {
@@ -69,19 +69,19 @@
   },
   "logo": {
     "text": "A+",
-    "color": "#7B2D8E",
+    "color": "#C8102E",
     "position": {
       "x": 0.3,
       "y": 0.3
     },
     "separator": {
-      "color": "#7B2D8E",
+      "color": "#C8102E",
       "width": 2
     }
   },
   "sectionNumber": {
     "position": "top-right",
-    "background": "#7B2D8E",
+    "background": "#C8102E",
     "textColor": "#FFFFFF",
     "format": "{section}.{subsection}",
     "width": 0.5,
@@ -296,7 +296,7 @@
           "position": { "x": "3%", "y": "12%", "width": "94%", "height": "6%" },
           "items": 3,
           "background": "backgroundAlt",
-          "checkmarkStyle": "purple"
+          "checkmarkStyle": "red"
         },
         "flowContainer": {
           "type": "flowchart",
