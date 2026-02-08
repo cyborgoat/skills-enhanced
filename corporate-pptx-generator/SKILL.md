@@ -1,10 +1,16 @@
+---
+name: corporate-pptx-generator
+description: Generate professional PowerPoint presentations with consistent corporate styling using predefined slide layouts and a configurable JSON theme. Use this when users want to create PowerPoint presentations with corporate branding, specific layout templates, or consistent formatting across slides.
+license: Complete terms in LICENSE.txt
+---
+
 # Corporate PowerPoint Generator Skill
 
 Generate professional PowerPoint presentations with consistent corporate styling using predefined slide layouts and a configurable JSON theme.
 
 ## Overview
 
-This skill creates PowerPoint presentations using an HTML-to-PPTX workflow with a corporate purple theme. The styling, colors, fonts, and layouts are fully configurable via a JSON configuration file.
+This skill creates PowerPoint presentations using an HTML-to-PPTX workflow with a corporate HUAWEI red theme. The styling, colors, fonts, and layouts are fully configurable via a JSON configuration file.
 
 ## When to Use This Skill
 
@@ -57,20 +63,20 @@ pip install -r .claude/skills/corporate-pptx-generator/requirements.txt
 
 The default configuration is in [`default-pptx-config.json`](default-pptx-config.json) in this skill's folder.
 
-### Color Theme (Default: Corporate Purple)
+### Color Theme (Default: Corporate Red)
 
 | Color Role | Hex Code | Usage |
 |------------|----------|-------|
-| primary | #7B2D8E | Main accent, headers, borders |
-| primaryDark | #5A1F6A | Darker emphasis |
-| primaryLight | #E8D5F0 | Light backgrounds, content boxes |
-| secondary | #D4B8E0 | Secondary backgrounds |
-| accent | #9B4DCA | Highlights |
+| primary | #C8102E | Main accent, headers, borders |
+| primaryDark | #8B0000 | Darker emphasis |
+| primaryLight | #FFE5E5 | Light backgrounds, content boxes |
+| secondary | #FFB3B3 | Secondary backgrounds |
+| accent | #E60012 | Highlights |
 | background | #FFFFFF | Main slide background |
-| backgroundAlt | #F8F4FA | Alternate section backgrounds |
+| backgroundAlt | #FFF5F5 | Alternate section backgrounds |
 | text.dark | #1A1A1A | Main body text |
-| text.onPrimary | #FFFFFF | Text on purple backgrounds |
-| text.highlight | #7B2D8E | Emphasized text |
+| text.onPrimary | #FFFFFF | Text on red backgrounds |
+| text.highlight | #C8102E | Emphasized text |
 
 ### Font Styles
 
@@ -78,8 +84,8 @@ The default configuration is in [`default-pptx-config.json`](default-pptx-config
 |-------|------|--------|-------|
 | title | 32pt | Bold | Slide titles |
 | subtitle | 24pt | Bold | Subtitles |
-| sectionHeader | 18pt | Bold | Section headers (white on purple) |
-| contentHeader | 16pt | Bold | Content headers (purple text) |
+| sectionHeader | 18pt | Bold | Section headers (white on red) |
+| contentHeader | 16pt | Bold | Content headers (red text) |
 | body | 12pt | Normal | Body text |
 | caption | 10pt | Normal | Small annotations |
 | label | 11pt | Bold | Labels, tags |
@@ -148,8 +154,8 @@ python .claude/skills/corporate-pptx-generator/scripts/thumbnail.py output.pptx 
 ```html
 <!-- Logo and Title Header -->
 <div style="position: absolute; left: 20pt; top: 20pt; display: flex; align-items: center; gap: 12pt;">
-  <p style="font-size: 28pt; font-weight: bold; color: #7B2D8E; margin: 0;">A+</p>
-  <div style="width: 3pt; height: 40pt; background: #7B2D8E;"></div>
+  <p style="font-size: 28pt; font-weight: bold; color: #C8102E; margin: 0;">A+</p>
+  <div style="width: 3pt; height: 40pt; background: #C8102E;"></div>
   <h1 style="font-size: 32pt; font-weight: bold; color: #1A1A1A; margin: 0;">Slide Title Here</h1>
 </div>
 ```
@@ -158,7 +164,7 @@ python .claude/skills/corporate-pptx-generator/scripts/thumbnail.py output.pptx 
 
 ```html
 <!-- Section Number Badge -->
-<div style="position: absolute; right: 0; top: 0; width: 48pt; height: 28pt; background: #7B2D8E; display: flex; align-items: center; justify-content: center;">
+<div style="position: absolute; right: 0; top: 0; width: 48pt; height: 28pt; background: #C8102E; display: flex; align-items: center; justify-content: center;">
   <p style="color: #FFFFFF; font-size: 14pt; font-weight: bold; margin: 0;">I.2</p>
 </div>
 ```
@@ -211,14 +217,14 @@ body {
   display: flex; flex-direction: column;
 }
 .header { display: flex; align-items: center; gap: 12pt; padding: 20pt; }
-.logo { font-size: 28pt; font-weight: bold; color: #7B2D8E; }
-.separator { width: 3pt; height: 40pt; background: #7B2D8E; }
+.logo { font-size: 28pt; font-weight: bold; color: #C8102E; }
+.separator { width: 3pt; height: 40pt; background: #C8102E; }
 .title { font-size: 32pt; font-weight: bold; color: #1A1A1A; margin: 0; }
 
 .framework-title {
   margin: 10pt auto 15pt auto;
   padding: 12pt 40pt;
-  background: #E8D5F0;
+  background: #FFE5E5;
   border-radius: 8pt 8pt 0 0;
   text-align: center;
 }
@@ -228,7 +234,7 @@ body {
 
 .category-column { width: 100pt; display: flex; flex-direction: column; gap: 10pt; }
 .category-box {
-  background: #7B2D8E; padding: 15pt 10pt; text-align: center;
+  background: #C8102E; padding: 15pt 10pt; text-align: center;
   display: flex; flex-direction: column; align-items: center; gap: 5pt;
 }
 .category-box p { color: #FFFFFF; font-size: 12pt; font-weight: bold; margin: 0; }
@@ -237,12 +243,12 @@ body {
 .items-grid { flex: 1; display: flex; flex-direction: column; gap: 10pt; }
 .item-row { display: flex; gap: 10pt; flex: 1; }
 .item-box {
-  flex: 1; background: #E8D5F0; border: 2pt solid #7B2D8E;
+  flex: 1; background: #FFE5E5; border: 2pt solid #C8102E;
   padding: 10pt; display: flex; align-items: center; gap: 8pt;
 }
 .item-number {
-  background: #FFFFFF; border: 1pt solid #7B2D8E;
-  padding: 4pt 8pt; font-size: 11pt; font-weight: bold; color: #7B2D8E;
+  background: #FFFFFF; border: 1pt solid #C8102E;
+  padding: 4pt 8pt; font-size: 11pt; font-weight: bold; color: #C8102E;
 }
 .item-text { font-size: 11pt; color: #1A1A1A; margin: 0; }
 </style>
@@ -315,25 +321,25 @@ body {
   display: flex; flex-direction: column;
 }
 .header { display: flex; align-items: center; gap: 12pt; padding: 20pt; }
-.logo { font-size: 28pt; font-weight: bold; color: #7B2D8E; }
-.separator { width: 3pt; height: 40pt; background: #7B2D8E; }
+.logo { font-size: 28pt; font-weight: bold; color: #C8102E; }
+.separator { width: 3pt; height: 40pt; background: #C8102E; }
 .title { font-size: 28pt; font-weight: bold; color: #1A1A1A; margin: 0; }
 
 .summary-box {
   margin: 0 30pt 20pt 30pt;
   padding: 15pt 20pt;
-  background: #F8F4FA;
-  border: 1pt solid #D4B8E0;
+  background: #FFF5F5;
+  border: 1pt solid #FFB3B3;
   border-radius: 8pt;
   display: flex; align-items: flex-start; gap: 15pt;
 }
-.summary-icon { font-size: 24pt; color: #7B2D8E; }
+.summary-icon { font-size: 24pt; color: #C8102E; }
 .summary-text { font-size: 12pt; color: #1A1A1A; margin: 0; line-height: 1.5; }
 
 .central-banner {
   margin: 0 auto 20pt auto;
   padding: 12pt 50pt;
-  background: #7B2D8E;
+  background: #C8102E;
   border-radius: 4pt;
 }
 .central-banner p { color: #FFFFFF; font-size: 14pt; font-weight: bold; margin: 0; text-align: center; }
@@ -345,11 +351,11 @@ body {
 .challenge-item { width: 180pt; text-align: center; }
 .challenge-icon {
   width: 50pt; height: 50pt; margin: 0 auto 10pt auto;
-  background: #E8D5F0; border-radius: 50%;
+  background: #FFE5E5; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
 }
-.challenge-icon p { font-size: 20pt; color: #7B2D8E; margin: 0; }
-.challenge-title { font-size: 14pt; font-weight: bold; color: #7B2D8E; margin: 0 0 5pt 0; }
+.challenge-icon p { font-size: 20pt; color: #C8102E; margin: 0; }
+.challenge-title { font-size: 14pt; font-weight: bold; color: #C8102E; margin: 0 0 5pt 0; }
 .challenge-desc { font-size: 10pt; color: #4A4A4A; margin: 0; line-height: 1.4; }
 </style>
 </head>
@@ -408,12 +414,12 @@ body {
   display: flex; flex-direction: column;
 }
 .header { display: flex; align-items: center; gap: 12pt; padding: 20pt; position: relative; }
-.logo { font-size: 28pt; font-weight: bold; color: #7B2D8E; }
-.separator { width: 3pt; height: 40pt; background: #7B2D8E; }
+.logo { font-size: 28pt; font-weight: bold; color: #C8102E; }
+.separator { width: 3pt; height: 40pt; background: #C8102E; }
 .title { font-size: 28pt; font-weight: bold; color: #1A1A1A; margin: 0; }
 .section-badge {
   position: absolute; right: 0; top: 0;
-  width: 48pt; height: 28pt; background: #7B2D8E;
+  width: 48pt; height: 28pt; background: #C8102E;
   display: flex; align-items: center; justify-content: center;
 }
 .section-badge p { color: #FFFFFF; font-size: 14pt; font-weight: bold; margin: 0; }
@@ -422,29 +428,29 @@ body {
 
 .column { flex: 1; display: flex; flex-direction: column; }
 .column-header {
-  background: #7B2D8E; padding: 12pt 15pt; text-align: center;
+  background: #C8102E; padding: 12pt 15pt; text-align: center;
 }
 .column-header p { color: #FFFFFF; font-size: 16pt; font-weight: bold; margin: 0; }
 
 .column-subheader {
-  background: #F8F4FA; padding: 8pt 15pt; text-align: center;
-  border-left: 2pt solid #7B2D8E; border-right: 2pt solid #7B2D8E;
+  background: #FFF5F5; padding: 8pt 15pt; text-align: center;
+  border-left: 2pt solid #C8102E; border-right: 2pt solid #C8102E;
 }
-.column-subheader p { color: #7B2D8E; font-size: 13pt; font-weight: bold; margin: 0; }
+.column-subheader p { color: #C8102E; font-size: 13pt; font-weight: bold; margin: 0; }
 
 .column-content {
-  flex: 1; border: 2pt solid #7B2D8E; border-top: none;
+  flex: 1; border: 2pt solid #C8102E; border-top: none;
   background: #FFFFFF; padding: 10pt;
 }
 .checklist-item {
-  padding: 10pt; border-bottom: 1pt dashed #D4B8E0;
+  padding: 10pt; border-bottom: 1pt dashed #FFB3B3;
 }
 .checklist-item:last-child { border-bottom: none; }
 .check-title { display: flex; align-items: flex-start; gap: 8pt; margin-bottom: 5pt; }
-.checkmark { color: #7B2D8E; font-size: 14pt; font-weight: bold; }
+.checkmark { color: #C8102E; font-size: 14pt; font-weight: bold; }
 .item-title { font-size: 13pt; font-weight: bold; color: #1A1A1A; margin: 0; }
 .item-desc { font-size: 11pt; color: #4A4A4A; margin: 0; padding-left: 22pt; line-height: 1.4; }
-.highlight { color: #7B2D8E; font-weight: bold; }
+.highlight { color: #C8102E; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -520,12 +526,12 @@ body {
   display: flex; flex-direction: column;
 }
 .header { display: flex; align-items: center; gap: 12pt; padding: 20pt; position: relative; }
-.logo { font-size: 28pt; font-weight: bold; color: #7B2D8E; }
-.separator { width: 3pt; height: 40pt; background: #7B2D8E; }
+.logo { font-size: 28pt; font-weight: bold; color: #C8102E; }
+.separator { width: 3pt; height: 40pt; background: #C8102E; }
 .title { font-size: 26pt; font-weight: bold; color: #1A1A1A; margin: 0; }
 .section-badge {
   position: absolute; right: 0; top: 0;
-  width: 48pt; height: 28pt; background: #7B2D8E;
+  width: 48pt; height: 28pt; background: #C8102E;
   display: flex; align-items: center; justify-content: center;
 }
 .section-badge p { color: #FFFFFF; font-size: 14pt; font-weight: bold; margin: 0; }
@@ -533,28 +539,28 @@ body {
 .summary-row {
   display: flex; align-items: flex-start; gap: 15pt;
   margin: 0 20pt 15pt 20pt; padding: 12pt 15pt;
-  background: #F8F4FA; border-radius: 4pt;
+  background: #FFF5F5; border-radius: 4pt;
 }
-.summary-icon { font-size: 20pt; color: #7B2D8E; }
+.summary-icon { font-size: 20pt; color: #C8102E; }
 .summary-list { margin: 0; padding-left: 20pt; }
 .summary-list li { font-size: 11pt; color: #1A1A1A; margin-bottom: 3pt; }
 
 .columns { display: flex; gap: 15pt; padding: 0 20pt 20pt 20pt; flex: 1; }
 .column {
-  flex: 1; border: 2pt solid #7B2D8E;
+  flex: 1; border: 2pt solid #C8102E;
   display: flex; flex-direction: column;
 }
-.col-header { background: #7B2D8E; padding: 10pt; text-align: center; }
+.col-header { background: #C8102E; padding: 10pt; text-align: center; }
 .col-header p { color: #FFFFFF; font-size: 14pt; font-weight: bold; margin: 0; }
-.col-desc { padding: 10pt; background: #F8F4FA; }
+.col-desc { padding: 10pt; background: #FFF5F5; }
 .col-desc p { font-size: 10pt; color: #4A4A4A; margin: 0; }
 .col-content { flex: 1; padding: 10pt; background: #FFFFFF; }
 .diagram-placeholder {
-  height: 80pt; background: #E8D5F0; border: 1pt dashed #7B2D8E;
+  height: 80pt; background: #FFE5E5; border: 1pt dashed #C8102E;
   display: flex; align-items: center; justify-content: center;
   margin-bottom: 10pt;
 }
-.diagram-placeholder p { color: #7B2D8E; font-size: 11pt; margin: 0; }
+.diagram-placeholder p { color: #C8102E; font-size: 11pt; margin: 0; }
 .col-bullets { margin: 0; padding-left: 15pt; }
 .col-bullets li { font-size: 10pt; color: #1A1A1A; margin-bottom: 5pt; }
 </style>
@@ -632,23 +638,23 @@ body {
   display: flex; flex-direction: column;
 }
 .header { display: flex; align-items: center; gap: 12pt; padding: 20pt; position: relative; }
-.logo { font-size: 28pt; font-weight: bold; color: #7B2D8E; }
-.separator { width: 3pt; height: 40pt; background: #7B2D8E; }
+.logo { font-size: 28pt; font-weight: bold; color: #C8102E; }
+.separator { width: 3pt; height: 40pt; background: #C8102E; }
 .title { font-size: 26pt; font-weight: bold; color: #1A1A1A; margin: 0; }
 .section-badge {
   position: absolute; right: 0; top: 0;
-  width: 48pt; height: 28pt; background: #7B2D8E;
+  width: 48pt; height: 28pt; background: #C8102E;
   display: flex; align-items: center; justify-content: center;
 }
 .section-badge p { color: #FFFFFF; font-size: 14pt; font-weight: bold; margin: 0; }
 
 .feature-banner {
   display: flex; gap: 10pt; margin: 0 20pt 15pt 20pt;
-  padding: 10pt 15pt; background: #F8F4FA; border-radius: 4pt;
+  padding: 10pt 15pt; background: #FFF5F5; border-radius: 4pt;
 }
 .feature-item { display: flex; align-items: center; gap: 8pt; }
-.feature-check { color: #7B2D8E; font-size: 14pt; }
-.feature-text { font-size: 11pt; color: #7B2D8E; margin: 0; }
+.feature-check { color: #C8102E; font-size: 14pt; }
+.feature-text { font-size: 11pt; color: #C8102E; margin: 0; }
 
 .flow-container {
   flex: 1; padding: 0 20pt 20pt 20pt;
@@ -656,16 +662,16 @@ body {
 }
 .flow-row { display: flex; align-items: center; gap: 15pt; }
 .flow-node {
-  padding: 12pt 20pt; background: #E8D5F0; border: 2pt solid #7B2D8E;
+  padding: 12pt 20pt; background: #FFE5E5; border: 2pt solid #C8102E;
   border-radius: 6pt; text-align: center; min-width: 100pt;
 }
 .flow-node p { font-size: 11pt; color: #1A1A1A; margin: 0; }
 .flow-node.start, .flow-node.end {
-  background: #7B2D8E;
+  background: #C8102E;
   border-radius: 20pt;
 }
 .flow-node.start p, .flow-node.end p { color: #FFFFFF; }
-.arrow { font-size: 18pt; color: #7B2D8E; }
+.arrow { font-size: 18pt; color: #C8102E; }
 </style>
 </head>
 <body>
@@ -736,19 +742,19 @@ body {
   display: flex; flex-direction: column;
 }
 .header { display: flex; align-items: center; gap: 12pt; padding: 20pt; position: relative; }
-.logo { font-size: 28pt; font-weight: bold; color: #7B2D8E; }
-.separator { width: 3pt; height: 40pt; background: #7B2D8E; }
+.logo { font-size: 28pt; font-weight: bold; color: #C8102E; }
+.separator { width: 3pt; height: 40pt; background: #C8102E; }
 .title { font-size: 26pt; font-weight: bold; color: #1A1A1A; margin: 0; }
 .section-badge {
   position: absolute; right: 0; top: 0;
-  width: 48pt; height: 28pt; background: #7B2D8E;
+  width: 48pt; height: 28pt; background: #C8102E;
   display: flex; align-items: center; justify-content: center;
 }
 .section-badge p { color: #FFFFFF; font-size: 14pt; font-weight: bold; margin: 0; }
 
 .process-header {
   margin: 0 20pt 10pt 20pt;
-  padding: 8pt 15pt; background: #7B2D8E; text-align: center;
+  padding: 8pt 15pt; background: #C8102E; text-align: center;
 }
 .process-header p { color: #FFFFFF; font-size: 12pt; font-weight: bold; margin: 0; }
 
@@ -757,7 +763,7 @@ body {
 }
 .chevron {
   flex: 1; padding: 15pt 10pt 15pt 25pt;
-  background: #E8D5F0; position: relative;
+  background: #FFE5E5; position: relative;
   clip-path: polygon(0 0, calc(100% - 15pt) 0, 100% 50%, calc(100% - 15pt) 100%, 0 100%, 15pt 50%);
 }
 .chevron:first-child {
@@ -767,16 +773,16 @@ body {
 
 .details-section {
   margin: 0 20pt; padding: 10pt;
-  background: #F8F4FA; border: 1pt dashed #7B2D8E;
+  background: #FFF5F5; border: 1pt dashed #C8102E;
 }
 .details-header { text-align: center; margin-bottom: 10pt; }
-.details-header p { font-size: 12pt; font-weight: bold; color: #7B2D8E; margin: 0; }
+.details-header p { font-size: 12pt; font-weight: bold; color: #C8102E; margin: 0; }
 
 .details-grid { display: flex; gap: 10pt; }
 .detail-box {
-  flex: 1; padding: 10pt; border: 1pt dashed #D4B8E0; background: #FFFFFF;
+  flex: 1; padding: 10pt; border: 1pt dashed #FFB3B3; background: #FFFFFF;
 }
-.detail-title { font-size: 11pt; font-weight: bold; color: #7B2D8E; margin: 0 0 5pt 0; }
+.detail-title { font-size: 11pt; font-weight: bold; color: #C8102E; margin: 0 0 5pt 0; }
 .detail-list { margin: 0; padding-left: 12pt; }
 .detail-list li { font-size: 9pt; color: #4A4A4A; margin-bottom: 3pt; }
 </style>
@@ -866,12 +872,12 @@ body {
   display: flex; flex-direction: column;
 }
 .header { display: flex; align-items: center; gap: 12pt; padding: 20pt; position: relative; }
-.logo { font-size: 28pt; font-weight: bold; color: #7B2D8E; }
-.separator { width: 3pt; height: 40pt; background: #7B2D8E; }
+.logo { font-size: 28pt; font-weight: bold; color: #C8102E; }
+.separator { width: 3pt; height: 40pt; background: #C8102E; }
 .title { font-size: 26pt; font-weight: bold; color: #1A1A1A; margin: 0; }
 .section-badge {
   position: absolute; right: 0; top: 0;
-  width: 48pt; height: 28pt; background: #7B2D8E;
+  width: 48pt; height: 28pt; background: #C8102E;
   display: flex; align-items: center; justify-content: center;
 }
 .section-badge p { color: #FFFFFF; font-size: 14pt; font-weight: bold; margin: 0; }
@@ -881,10 +887,10 @@ body {
 
 .step {
   flex: 1; display: flex; gap: 12pt;
-  padding: 15pt; background: #E8D5F0; border-radius: 6pt;
+  padding: 15pt; background: #FFE5E5; border-radius: 6pt;
 }
 .step-number {
-  width: 35pt; height: 35pt; background: #7B2D8E; border-radius: 50%;
+  width: 35pt; height: 35pt; background: #C8102E; border-radius: 50%;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .step-number p { color: #FFFFFF; font-size: 16pt; font-weight: bold; margin: 0; }
@@ -895,11 +901,11 @@ body {
 .arrow-down {
   display: flex; justify-content: center; margin: 10pt 0;
 }
-.arrow-down p { font-size: 24pt; color: #7B2D8E; margin: 0; }
+.arrow-down p { font-size: 24pt; color: #C8102E; margin: 0; }
 
 .result-box {
   margin-top: 10pt; padding: 15pt;
-  background: #7B2D8E; border-radius: 6pt; text-align: center;
+  background: #C8102E; border-radius: 6pt; text-align: center;
 }
 .result-box p { color: #FFFFFF; font-size: 14pt; font-weight: bold; margin: 0; }
 </style>
@@ -975,12 +981,12 @@ body {
   display: flex; flex-direction: column;
 }
 .header { display: flex; align-items: center; gap: 12pt; padding: 15pt 20pt; position: relative; }
-.logo { font-size: 24pt; font-weight: bold; color: #7B2D8E; }
-.separator { width: 3pt; height: 35pt; background: #7B2D8E; }
+.logo { font-size: 24pt; font-weight: bold; color: #C8102E; }
+.separator { width: 3pt; height: 35pt; background: #C8102E; }
 .title { font-size: 24pt; font-weight: bold; color: #1A1A1A; margin: 0; }
 .section-badge {
   position: absolute; right: 0; top: 0;
-  width: 48pt; height: 28pt; background: #7B2D8E;
+  width: 48pt; height: 28pt; background: #C8102E;
   display: flex; align-items: center; justify-content: center;
 }
 .section-badge p { color: #FFFFFF; font-size: 14pt; font-weight: bold; margin: 0; }
@@ -992,20 +998,20 @@ body {
   font-size: 9pt;
 }
 .matrix-table th {
-  background: #7B2D8E; color: #FFFFFF;
+  background: #C8102E; color: #FFFFFF;
   padding: 8pt 6pt; text-align: center;
-  font-weight: bold; border: 1pt solid #5A1F6A;
+  font-weight: bold; border: 1pt solid #8B0000;
 }
 .matrix-table td {
-  padding: 6pt; border: 1pt solid #D4B8E0;
+  padding: 6pt; border: 1pt solid #FFB3B3;
   vertical-align: top;
 }
 .row-header {
-  background: #E8D5F0; font-weight: bold;
+  background: #FFE5E5; font-weight: bold;
   color: #1A1A1A; text-align: center; width: 80pt;
 }
 .cell-content { color: #4A4A4A; line-height: 1.3; }
-.highlight-cell { background: #F8F4FA; }
+.highlight-cell { background: #FFF5F5; }
 </style>
 </head>
 <body>
