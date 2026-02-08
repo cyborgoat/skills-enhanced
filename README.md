@@ -23,6 +23,20 @@ Generate professional PowerPoint presentations with a modern tech-blueprint visu
 
 **Technologies:** Node.js (Playwright, PptxGenJS), Python (python-pptx, Manim, Pillow, Poppler)
 
+### 📊 [Data Visualization Generator](./dataviz-enhanced/)
+
+Generate publication-quality, Tufte-inspired data visualizations with optional anomaly highlighting from structured data (CSV, JSON, Excel) or unstructured text.
+
+**Features:**
+- 13 chart types: line, bar, hbar, scatter, histogram, heatmap, box, pie, donut, area, bubble, timeseries, small multiples
+- Tufte-inspired minimal styling with colorblind-safe default palette (Wong 2011)
+- Anomaly detection (Z-score, IQR, min/max, changepoint) with visual highlight overlays
+- Multi-format input (CSV, TSV, JSON, Excel, Markdown tables, HTML tables, YAML) and output (PNG, SVG, PDF)
+- Statistical annotations: trend lines, R², confidence bands
+- Preview grid for comparing multiple charts side-by-side
+
+**Technologies:** Python (matplotlib, seaborn, pandas, scipy, Pillow)
+
 ## Installation
 
 ### Quick Start
@@ -67,6 +81,8 @@ Once installed, simply invoke the skill in Claude Code:
 
 - `/pptx-enhanced Create a PowerPoint presentation about cloud architecture`
 - `/pptx-enhanced Generate slides for technical documentation`
+- `/dataviz-enhanced Create a bar chart of quarterly revenue from this CSV`
+- `/dataviz-enhanced Visualize the outliers in this sales data`
 
 Each skill's README or SKILL.md contains detailed usage instructions and capabilities.
 
@@ -77,17 +93,27 @@ skills-enhanced/
 ├── README.md                      # This file
 ├── LICENSE                        # License file
 ├── .gitignore                     # Git ignore patterns
-└── pptx-enhanced/                 # PowerPoint generation skill
+├── pptx-enhanced/                 # PowerPoint generation skill
+│   ├── SKILL.md                   # Skill documentation
+│   ├── README.md                  # Skill README
+│   ├── package.json               # Node.js dependencies
+│   ├── requirements.txt           # Python dependencies
+│   ├── default-pptx-config.json   # Theme configuration
+│   ├── html2pptx.md               # HTML slide creation rules
+│   └── scripts/                   # Utility scripts
+│       ├── html2pptx.js           # HTML to PowerPoint converter
+│       ├── thumbnail.py           # Slide thumbnail generator
+│       └── inventory.py           # Text inventory extractor
+└── dataviz-enhanced/              # Data visualization skill
     ├── SKILL.md                   # Skill documentation
     ├── README.md                  # Skill README
-    ├── package.json               # Node.js dependencies
     ├── requirements.txt           # Python dependencies
-    ├── default-pptx-config.json   # Theme configuration
-    ├── html2pptx.md               # HTML slide creation rules
+    ├── default-viz-config.json    # Theme, palettes, chart defaults
     └── scripts/                   # Utility scripts
-        ├── html2pptx.js           # HTML to PowerPoint converter
-        ├── thumbnail.py           # Slide thumbnail generator
-        └── inventory.py           # Text inventory extractor
+        ├── parse_input.py         # Data file → normalized CSV/JSON
+        ├── generate_chart.py      # Data → chart (SVG/PNG/PDF)
+        ├── detect_highlights.py   # Anomaly detection → highlights JSON
+        └── preview_grid.py        # Multiple images → review grid
 ```
 
 ## Contributing
@@ -119,7 +145,7 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 ### Roadmap
 - [ ] Document analyzer and summarizer
-- [ ] Data visualization generator
+- [x] Data Visualization Generator (dataviz-enhanced) - Tufte-inspired charts with anomaly highlighting
 - [ ] Code documentation generator
 - [ ] Meeting notes formatter
 - [ ] Presentation content optimizer

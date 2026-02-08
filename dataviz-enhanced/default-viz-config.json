@@ -1,0 +1,236 @@
+{
+  "theme": {
+    "name": "Tufte Clean",
+    "description": "Publication-quality, minimal-ink visualization theme inspired by Edward Tufte"
+  },
+  "palettes": {
+    "colorblind": {
+      "description": "Wong (2011) colorblind-safe palette — default for all charts",
+      "colors": ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"]
+    },
+    "sequential": {
+      "description": "Single-hue sequential palette for ordered data",
+      "colors": ["#f7fbff", "#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#4292c6", "#2171b5", "#084594"]
+    },
+    "diverging": {
+      "description": "Two-hue diverging palette for data with a meaningful midpoint",
+      "colors": ["#b2182b", "#d6604d", "#f4a582", "#fddbc7", "#d1e5f0", "#92c5de", "#4393c3", "#2166ac"]
+    },
+    "categorical": {
+      "description": "High-contrast categorical palette for nominal data",
+      "colors": ["#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f", "#edc948", "#b07aa1", "#ff9da7"]
+    },
+    "monochrome": {
+      "description": "Grayscale palette for print-friendly output",
+      "colors": ["#1a1a1a", "#4d4d4d", "#737373", "#999999", "#b3b3b3", "#cccccc", "#e0e0e0", "#f0f0f0"]
+    }
+  },
+  "chart": {
+    "figsize": [10, 6],
+    "dpi": 150,
+    "background": "#ffffff",
+    "grid": {
+      "show": true,
+      "axis": "y",
+      "style": "dashed",
+      "alpha": 0.3,
+      "color": "#cccccc",
+      "linewidth": 0.5
+    },
+    "spines": {
+      "top": false,
+      "right": false,
+      "left": true,
+      "bottom": true,
+      "linewidth": 0.8,
+      "color": "#333333"
+    },
+    "fonts": {
+      "title": {
+        "family": "Georgia",
+        "size": 16,
+        "weight": "bold",
+        "color": "#1a1a1a"
+      },
+      "subtitle": {
+        "family": "Georgia",
+        "size": 12,
+        "weight": "normal",
+        "color": "#4d4d4d"
+      },
+      "axis_label": {
+        "family": "Arial",
+        "size": 11,
+        "weight": "normal",
+        "color": "#333333"
+      },
+      "tick_label": {
+        "family": "Arial",
+        "size": 9,
+        "weight": "normal",
+        "color": "#4d4d4d"
+      },
+      "annotation": {
+        "family": "Arial",
+        "size": 9,
+        "weight": "normal",
+        "color": "#333333"
+      },
+      "legend": {
+        "family": "Arial",
+        "size": 9,
+        "weight": "normal",
+        "color": "#333333"
+      }
+    },
+    "margins": {
+      "top": 0.12,
+      "bottom": 0.15,
+      "left": 0.12,
+      "right": 0.05
+    }
+  },
+  "chart_types": {
+    "line": {
+      "linewidth": 2.0,
+      "marker": "o",
+      "markersize": 4,
+      "alpha": 1.0
+    },
+    "bar": {
+      "width": 0.7,
+      "edgecolor": "#ffffff",
+      "edgewidth": 0.5,
+      "alpha": 0.9
+    },
+    "hbar": {
+      "height": 0.7,
+      "edgecolor": "#ffffff",
+      "edgewidth": 0.5,
+      "alpha": 0.9
+    },
+    "scatter": {
+      "size": 40,
+      "alpha": 0.7,
+      "edgecolor": "#ffffff",
+      "edgewidth": 0.5
+    },
+    "histogram": {
+      "bins": 30,
+      "edgecolor": "#ffffff",
+      "edgewidth": 0.5,
+      "alpha": 0.8
+    },
+    "heatmap": {
+      "cmap": "YlOrRd",
+      "annot": true,
+      "fmt": ".1f",
+      "linewidths": 0.5,
+      "linecolor": "#ffffff"
+    },
+    "box": {
+      "width": 0.6,
+      "fliersize": 4,
+      "linewidth": 1.2
+    },
+    "pie": {
+      "startangle": 90,
+      "autopct": "%1.1f%%",
+      "pctdistance": 0.75,
+      "shadow": false
+    },
+    "donut": {
+      "startangle": 90,
+      "autopct": "%1.1f%%",
+      "pctdistance": 0.82,
+      "wedgeprops_width": 0.4,
+      "shadow": false
+    },
+    "area": {
+      "alpha": 0.4,
+      "linewidth": 1.5
+    },
+    "bubble": {
+      "alpha": 0.6,
+      "edgecolor": "#ffffff",
+      "edgewidth": 0.5,
+      "size_range": [20, 500]
+    },
+    "timeseries": {
+      "linewidth": 2.0,
+      "marker": null,
+      "alpha": 1.0,
+      "date_format": "%Y-%m-%d"
+    },
+    "small_multiples": {
+      "max_cols": 4,
+      "share_y": true,
+      "share_x": true,
+      "subplot_size": [3, 2.5]
+    }
+  },
+  "highlights": {
+    "halo_ring": {
+      "description": "Concentric ring around datapoint",
+      "color": "#D55E00",
+      "alpha": 0.4,
+      "size_multiplier": 3.0,
+      "linewidth": 2.0
+    },
+    "color_shift": {
+      "description": "Change datapoint color to highlight color",
+      "color": "#D55E00",
+      "alpha": 1.0
+    },
+    "size_boost": {
+      "description": "Enlarge the datapoint",
+      "size_multiplier": 2.5
+    },
+    "glow": {
+      "description": "Soft glow effect behind datapoint",
+      "color": "#F0E442",
+      "alpha": 0.3,
+      "size_multiplier": 5.0
+    },
+    "annotation_arrow": {
+      "description": "Arrow with text label pointing to datapoint",
+      "arrowstyle": "->",
+      "color": "#333333",
+      "fontsize": 9,
+      "offset": [30, 30],
+      "connectionstyle": "arc3,rad=0.2"
+    },
+    "band_shade": {
+      "description": "Shaded vertical or horizontal band around value",
+      "color": "#D55E00",
+      "alpha": 0.1,
+      "width": 0.5
+    },
+    "marker_change": {
+      "description": "Change marker shape for highlighted point",
+      "marker": "D",
+      "size_multiplier": 1.8
+    },
+    "combo": {
+      "description": "Combine multiple highlight styles",
+      "styles": ["color_shift", "size_boost", "annotation_arrow"]
+    }
+  },
+  "statistics": {
+    "trend_line": {
+      "color": "#999999",
+      "linestyle": "--",
+      "linewidth": 1.0,
+      "alpha": 0.7
+    },
+    "confidence_band": {
+      "alpha": 0.15,
+      "color": null
+    },
+    "annotation": {
+      "fontsize": 9,
+      "color": "#666666",
+      "position": "upper_right"
+    }
+  }
+}

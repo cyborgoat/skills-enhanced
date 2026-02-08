@@ -85,3 +85,9 @@ htmlcov/
 .env
 .env.local
 .env.*.local
+
+# Temporary files
+tmp/
+
+# Claude
+.claude/

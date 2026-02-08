@@ -1,0 +1,180 @@
+{
+  "theme": {
+    "name": "Tech Blueprint",
+    "colors": {
+      "primary": "#0D4F6E",
+      "primaryDark": "#083A52",
+      "primaryLight": "#D6E8F0",
+      "secondary": "#D4842A",
+      "secondaryLight": "#FBF0E0",
+      "accent": "#3B9FD6",
+      "background": "#F0F4F8",
+      "backgroundAlt": "#E8ECF1",
+      "cardBackground": "#FFFFFF",
+      "text": {
+        "dark": "#1A2332",
+        "medium": "#4A5568",
+        "light": "#718096",
+        "onPrimary": "#FFFFFF",
+        "onSecondary": "#FFFFFF",
+        "highlight": "#D4842A"
+      },
+      "border": {
+        "primary": "#0D4F6E",
+        "secondary": "#D4842A",
+        "light": "#CBD5E0",
+        "subtle": "#E2E8F0"
+      }
+    },
+    "fonts": {
+      "title": {
+        "family": "Arial",
+        "size": 30,
+        "weight": "bold",
+        "color": "text.dark"
+      },
+      "subtitle": {
+        "family": "Arial",
+        "size": 18,
+        "weight": "normal",
+        "color": "text.medium"
+      },
+      "sectionHeader": {
+        "family": "Arial",
+        "size": 16,
+        "weight": "bold",
+        "color": "text.onPrimary"
+      },
+      "contentHeader": {
+        "family": "Arial",
+        "size": 14,
+        "weight": "bold",
+        "color": "primary"
+      },
+      "body": {
+        "family": "Arial",
+        "size": 12,
+        "weight": "normal",
+        "color": "text.dark"
+      },
+      "caption": {
+        "family": "Arial",
+        "size": 10,
+        "weight": "normal",
+        "color": "text.medium"
+      },
+      "label": {
+        "family": "Arial",
+        "size": 11,
+        "weight": "bold",
+        "color": "text.dark"
+      },
+      "mono": {
+        "family": "Courier New",
+        "size": 10,
+        "weight": "normal",
+        "color": "text.medium"
+      }
+    }
+  },
+  "slideLayouts": {
+    "title": {
+      "name": "Title Slide",
+      "description": "Hero opening slide with large bold title on the left and subtitle below. Clean, editorial feel with optional decorative element area on the right."
+    },
+    "twoColumnSplit": {
+      "name": "Two Column Split",
+      "description": "Side-by-side sections with labeled headers. Each column has an uppercase label, descriptive content, key-value pairs, and a status line. Use for comparing two systems, domains, or perspectives."
+    },
+    "timeline": {
+      "name": "Timeline / Evolution",
+      "description": "Horizontal timeline showing progression across eras or phases. Each phase has a date label, icon area, title, and description. Use for showing technology evolution, roadmaps, or historical progression."
+    },
+    "comparison": {
+      "name": "Old vs New Comparison",
+      "description": "Two-column before/after comparison with contrasting headers. Left shows the old approach, right shows the new approach. Includes visual diagram areas and bullet points."
+    },
+    "funnel": {
+      "name": "Funnel / Lifecycle",
+      "description": "Vertical funnel or staged process showing transformation through numbered stages. Each stage has a title and description. Ends with a key takeaway callout."
+    },
+    "centralHub": {
+      "name": "Central Hub Diagram",
+      "description": "Central element with radiating connected components. Center has a main label, with 3-4 surrounding satellite elements connected by lines. Use for architecture diagrams, system components, or relationship maps."
+    },
+    "quadrant": {
+      "name": "Quadrant / Matrix Chart",
+      "description": "2x2 quadrant chart with labeled axes. One quadrant is highlighted as the target zone. Includes a strategy panel on the right side."
+    },
+    "horizontalProcess": {
+      "name": "Horizontal Process Flow",
+      "description": "Left-to-right sequential process with labeled stages. Each stage has an icon area, title, and description. Includes a bottom callout bar for additional context."
+    },
+    "problemSolution": {
+      "name": "Problem / Solution",
+      "description": "Left panel shows the problem with description and visual area. Right panel shows the numbered solution steps. Includes a bottom value-delivered callout bar."
+    },
+    "businessModel": {
+      "name": "Business Model Comparison",
+      "description": "Stacked cards showing old model vs new model with a strategic moat callout. Use for business model transitions, pricing changes, or strategy shifts."
+    },
+    "supplyChain": {
+      "name": "Supply Chain / Pipeline",
+      "description": "Chevron-style pipeline with 4-6 sequential stages. Each chevron has an icon area, title, and bullet points below."
+    },
+    "threeColumn": {
+      "name": "Three Column Info",
+      "description": "Three equal columns with icon area, title, and description in each. Clean layout for presenting three related concepts, options, or categories."
+    },
+    "challengeTable": {
+      "name": "Challenge / Mitigation Table",
+      "description": "Two-column table with icon rows. Left column shows challenges, right column shows mitigations. Each row has an icon area and text content."
+    },
+    "closingSlide": {
+      "name": "Closing / Summary Slide",
+      "description": "Bold central statement with supporting bullet points below. Use as a final takeaway or key message slide."
+    }
+  },
+  "visualElements": {
+    "blueprintGrid": {
+      "description": "Subtle technical grid lines in background corners for depth",
+      "opacity": 0.06,
+      "color": "#0D4F6E"
+    },
+    "arrows": {
+      "style": "filled",
+      "color": "primary",
+      "headStyle": "triangle"
+    },
+    "connectors": {
+      "style": "solid",
+      "color": "primary",
+      "width": 2
+    },
+    "calloutBar": {
+      "background": "#D4842A",
+      "textColor": "#FFFFFF",
+      "iconColor": "#FFFFFF",
+      "borderRadius": 4
+    },
+    "boxes": {
+      "borderRadius": 6,
+      "borderWidth": 2,
+      "padding": 12
+    },
+    "dividers": {
+      "color": "#0D4F6E",
+      "width": 2,
+      "style": "solid"
+    }
+  },
+  "slideDefaults": {
+    "width": 13.333,
+    "height": 7.5,
+    "unit": "inches",
+    "marginTop": 0.3,
+    "marginBottom": 0.3,
+    "marginLeft": 0.4,
+    "marginRight": 0.4
+  }
+}
