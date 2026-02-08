@@ -8,18 +8,20 @@ This repository contains custom Claude skills that can be installed in your `.cl
 
 ## Available Skills
 
-### 🎨 [Corporate PowerPoint Generator](./corporate-pptx-generator/)
+### 🎨 [Enhanced PowerPoint Generator](./pptx-enhanced/)
 
-Generate professional PowerPoint presentations with consistent corporate styling using predefined slide layouts and configurable JSON themes.
+Generate professional PowerPoint presentations with a modern tech-blueprint visual style featuring deep teal headers, warm amber accents, and clean editorial layouts.
 
 **Features:**
+- Modern tech-blueprint theme with configurable colors and fonts
 - HTML-to-PPTX conversion workflow
-- Configurable themes (colors, fonts, layouts)
-- Multiple slide layout templates (overview, challenges, methodology, comparison, etc.)
+- SVG diagram generation and multi-format image support (SVG, PNG, JPG, GIF)
+- Animated GIF generation using Manim Community Edition for instructional visuals
+- Multiple slide layout templates (title, content, comparison, timeline, process flow, architecture)
 - Automated slide thumbnail generation for validation
 - Text inventory extraction from presentations
 
-**Technologies:** Node.js (Playwright, PptxGenJS), Python (python-pptx, Pillow)
+**Technologies:** Node.js (Playwright, PptxGenJS), Python (python-pptx, Manim, Pillow, Poppler)
 
 ## Installation
 
@@ -33,7 +35,7 @@ cd skills-enhanced
 
 2. Choose a skill and navigate to its folder:
 ```bash
-cd corporate-pptx-generator
+cd pptx-enhanced
 ```
 
 3. Install dependencies:
@@ -44,12 +46,15 @@ npm run install-browsers
 
 # Python dependencies
 pip install -r requirements.txt
+
+# System dependencies (macOS)
+brew install libreoffice poppler
 ```
 
 4. Copy the skill to your Claude skills directory:
 ```bash
 # From the skill folder
-cp -r ../corporate-pptx-generator ~/.claude/skills/
+cp -r ../pptx-enhanced ~/.claude/skills/
 ```
 
 ### Alternative: Direct Installation
@@ -58,24 +63,31 @@ You can also copy individual skill folders directly to your `~/.claude/skills/` 
 
 ## Usage
 
-Once installed, simply mention the skill's capability when chatting with Claude:
+Once installed, simply invoke the skill in Claude Code:
 
-- "Create a PowerPoint presentation about..." (triggers corporate-pptx-generator)
-- "Generate slides for..." (triggers corporate-pptx-generator)
+- `/pptx-enhanced Create a PowerPoint presentation about cloud architecture`
+- `/pptx-enhanced Generate slides for technical documentation`
 
-Each skill's README or SKILL.md contains detailed usage instructions.
+Each skill's README or SKILL.md contains detailed usage instructions and capabilities.
 
 ## Repository Structure
 
 ```
 skills-enhanced/
 ├── README.md                      # This file
+├── LICENSE                        # License file
 ├── .gitignore                     # Git ignore patterns
-└── <skill-name>/                  # Individual skill folders
+└── pptx-enhanced/                 # PowerPoint generation skill
     ├── SKILL.md                   # Skill documentation
-    ├── package.json               # Node.js dependencies (if applicable)
-    ├── requirements.txt           # Python dependencies (if applicable)
+    ├── README.md                  # Skill README
+    ├── package.json               # Node.js dependencies
+    ├── requirements.txt           # Python dependencies
+    ├── default-pptx-config.json   # Theme configuration
+    ├── html2pptx.md               # HTML slide creation rules
     └── scripts/                   # Utility scripts
+        ├── html2pptx.js           # HTML to PowerPoint converter
+        ├── thumbnail.py           # Slide thumbnail generator
+        └── inventory.py           # Text inventory extractor
 ```
 
 ## Contributing
@@ -91,18 +103,26 @@ Each skill should be:
 - **Node.js**: v16+ (for skills using JavaScript/TypeScript)
 - **Python**: 3.8+ (for skills using Python)
 - **Claude Desktop**: Latest version with skills support
+- **System Dependencies** (for pptx-enhanced):
+  - **LibreOffice**: For PPTX generation and manipulation
+  - **Poppler**: For PDF processing and conversion
+  - **Playwright Chromium**: Installed via `npm run install-browsers`
 
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details
 
-## Skills Roadmap
+## Skills Development
 
-Future skills planned:
+### Current
+- [x] Enhanced PowerPoint Generator (pptx-enhanced) - Modern tech-blueprint theme with SVG and animated GIF support
+
+### Roadmap
 - [ ] Document analyzer and summarizer
 - [ ] Data visualization generator
 - [ ] Code documentation generator
 - [ ] Meeting notes formatter
+- [ ] Presentation content optimizer
 
 ---
 
