@@ -1,3 +1,9 @@
+---
+name: pptx-enhanced
+description: Create and edit professional PowerPoint presentations using the enhanced HTML-to-PPTX workflow with technical visual styling, layout templates, diagram support, and validation tooling. Use when users need to create, modify, convert, analyze, or polish .pptx slide decks.
+license: Complete terms in LICENSE
+---
+
 # Enhanced PowerPoint Generator Skill
 
 Generate professional PowerPoint presentations with a modern tech-blueprint visual style featuring deep teal blue headers, warm amber accents, subtle technical grid details, and clean editorial layouts. This enhanced skill encourages generating SVG diagrams for visual content, supports multiple image formats (SVG, PNG, JPG, GIF), and can produce animated GIFs using Manim for instructional visuals.

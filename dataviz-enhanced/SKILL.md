@@ -1,3 +1,9 @@
+---
+name: dataviz-enhanced
+description: Generate publication-quality data visualizations with optional anomaly highlighting. Use when users ask to create or refine charts/graphs/plots, visualize CSV/JSON/Excel/tabular data, compare series, detect outliers, or produce chart grids for review.
+license: Complete terms in LICENSE
+---
+
 # dataviz-enhanced — Data Visualization Generator
 
 A Claude Code skill that transforms data into publication-quality, Tufte-inspired visualizations with optional anomaly highlighting.
