@@ -91,3 +91,6 @@ tmp/
 
 # Claude
 .claude/
+
+# Workspace
+workspace/

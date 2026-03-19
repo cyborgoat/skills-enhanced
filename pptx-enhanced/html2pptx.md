@@ -83,10 +83,15 @@ Every HTML slide must include proper body dimensions:
 
 **Supported image formats:** PNG, JPG, GIF (via `<img>` tags)
 
-**PREFER generating SVG diagrams** for any visual content (flowcharts, architecture diagrams, network topologies) rather than using placeholder text. Generate the SVG programmatically, rasterize to PNG with Sharp, then embed in the HTML slide.
+**PREFER generating diagrams** for any visual content rather than using placeholder text:
+- **Mermaid** diagrams for sequence diagrams, complex flowcharts, ER diagrams, state machines — write `.mmd` definition, render to PNG with `scripts/render-mermaid.js`
+- **SVG** diagrams for simple flowcharts, hub-and-spoke, layered architectures — generate SVG programmatically, rasterize to PNG with Sharp
 
 ```html
-<!-- Embed a generated diagram -->
+<!-- Embed a rendered Mermaid diagram -->
+<img src="workspace/sequence-diagram.png" style="width: 500pt; height: auto; max-height: 200pt;">
+
+<!-- Embed a generated SVG diagram -->
 <img src="workspace/architecture-diagram.png" style="width: 400pt; height: auto;">
 
 <!-- Centered diagram in a container -->
@@ -96,6 +101,21 @@ Every HTML slide must include proper body dimensions:
 
 <!-- Animated GIF (shows first frame in PPTX, animated in HTML) -->
 <img src="workspace/process-animation.gif" style="width: 400pt; height: auto;">
+```
+
+#### Generating Mermaid Diagrams
+
+```javascript
+const { renderMermaid } = require('./.claude/skills/pptx-enhanced/scripts/render-mermaid');
+
+// Render inline definition to PNG
+await renderMermaid(`
+  flowchart LR
+    A[User] --> B[Agent]
+    B --> C[CLI]
+    C --> D[Result]
+`, 'workspace/flow.png', { width: 800, theme: 'base' });
+// Then in HTML: <img src="workspace/flow.png" style="width: 500pt; height: auto;">
 ```
 
 ### Icons & Gradients
@@ -168,17 +188,17 @@ const bgPath = await createGradientBackground("gradient-bg.png");
 <html>
 <head>
 <style>
-html { background: #ffffff; }
+html { background: #1A1A2E; }
 body {
   width: 720pt; height: 405pt; margin: 0; padding: 0;
-  background: #f5f5f5; font-family: Arial, sans-serif;
+  background: #1A1A2E; font-family: Arial, sans-serif;
   display: flex;
 }
-.content { margin: 30pt; padding: 40pt; background: #ffffff; border-radius: 8pt; }
-h1 { color: #2d3748; font-size: 32pt; }
+.content { margin: 30pt; padding: 40pt; background: #2A2A44; border-radius: 8pt; }
+h1 { color: #FFFFFF; font-size: 32pt; }
 .box {
-  background: #70ad47; padding: 20pt; border: 3px solid #5a8f37;
-  border-radius: 12pt; box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.25);
+  background: #C62828; padding: 20pt; border: 3px solid #8E0000;
+  border-radius: 12pt; box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.4);
 }
 </style>
 </head>
@@ -534,8 +554,8 @@ slide.addChart(pptx.charts.LINE, [
 - Accessibility (avoid red-green only combinations)
 
 ```javascript
-// Example: Ocean palette-inspired chart colors (adjusted for contrast)
-const chartColors = ["16A085", "FF6B9D", "2C3E50", "F39C12", "9B59B6"];
+// Example: Editorial Light palette-inspired chart colors (adjusted for contrast)
+const chartColors = ["C62828", "FFB300", "E53935", "FFCDD2", "78909C"];
 
 // Single-series chart: Use one color for all bars/points
 slide.addChart(pptx.charts.BAR, [{
@@ -544,7 +564,7 @@ slide.addChart(pptx.charts.BAR, [{
     values: [4500, 5500, 6200, 7100]
 }], {
     ...placeholders[0],
-    chartColors: ["16A085"],  // All bars same color
+    chartColors: ["C62828"],  // All bars same color
     showLegend: false
 });
 
@@ -554,7 +574,7 @@ slide.addChart(pptx.charts.LINE, [
     { name: "Product B", labels: ["Q1", "Q2", "Q3"], values: [15, 25, 20] }
 ], {
     ...placeholders[0],
-    chartColors: ["16A085", "FF6B9D"]  // One color per series
+    chartColors: ["C62828", "FFB300"]  // One color per series
 });
 ```
 

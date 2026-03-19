@@ -1,29 +1,29 @@
 {
   "theme": {
-    "name": "Tech Blueprint",
+    "name": "Editorial Light",
     "colors": {
-      "primary": "#0D4F6E",
-      "primaryDark": "#083A52",
-      "primaryLight": "#D6E8F0",
-      "secondary": "#D4842A",
-      "secondaryLight": "#FBF0E0",
-      "accent": "#3B9FD6",
-      "background": "#F0F4F8",
-      "backgroundAlt": "#E8ECF1",
+      "primary": "#C62828",
+      "primaryDark": "#8E0000",
+      "primaryLight": "#FFF1F1",
+      "secondary": "#FFB300",
+      "secondaryLight": "#FFF8E1",
+      "accent": "#4E6E8E",
+      "background": "#FFFFFF",
+      "backgroundAlt": "#FAFAFC",
       "cardBackground": "#FFFFFF",
       "text": {
-        "dark": "#1A2332",
-        "medium": "#4A5568",
-        "light": "#718096",
+        "dark": "#1F2937",
+        "medium": "#5B6474",
+        "light": "#7B8794",
         "onPrimary": "#FFFFFF",
-        "onSecondary": "#FFFFFF",
-        "highlight": "#D4842A"
+        "onSecondary": "#5D4037",
+        "highlight": "#9A6700"
       },
       "border": {
-        "primary": "#0D4F6E",
-        "secondary": "#D4842A",
-        "light": "#CBD5E0",
-        "subtle": "#E2E8F0"
+        "primary": "#D7DEE8",
+        "secondary": "#E6D7A8",
+        "light": "#D7DEE8",
+        "subtle": "#EEF2F6"
       }
     },
     "fonts": {
@@ -31,7 +31,7 @@
         "family": "Arial",
         "size": 30,
         "weight": "bold",
-        "color": "text.dark"
+        "color": "primary"
       },
       "subtitle": {
         "family": "Arial",
@@ -43,7 +43,7 @@
         "family": "Arial",
         "size": 16,
         "weight": "bold",
-        "color": "text.onPrimary"
+        "color": "text.dark"
       },
       "contentHeader": {
         "family": "Arial",
@@ -73,14 +73,14 @@
         "family": "Courier New",
         "size": 10,
         "weight": "normal",
-        "color": "text.medium"
+        "color": "text.dark"
       }
     }
   },
   "slideLayouts": {
     "title": {
       "name": "Title Slide",
-      "description": "Hero opening slide with large bold title on the left and subtitle below. Clean, editorial feel with optional decorative element area on the right."
+      "description": "Hero opening slide on a white canvas with red title typography, subtle neutral supporting cards, and optional visual evidence on the right."
     },
     "twoColumnSplit": {
       "name": "Two Column Split",
@@ -137,9 +137,9 @@
   },
   "visualElements": {
     "blueprintGrid": {
-      "description": "Subtle technical grid lines in background corners for depth",
-      "opacity": 0.06,
-      "color": "#0D4F6E"
+      "description": "Subtle neutral grid lines in background corners for depth",
+      "opacity": 0.04,
+      "color": "#C9D1DD"
     },
     "arrows": {
       "style": "filled",
@@ -152,9 +152,9 @@
       "width": 2
     },
     "calloutBar": {
-      "background": "#D4842A",
-      "textColor": "#FFFFFF",
-      "iconColor": "#FFFFFF",
+      "background": "#FAFAFC",
+      "textColor": "#1F2937",
+      "iconColor": "#4E6E8E",
       "borderRadius": 4
     },
     "boxes": {
@@ -163,8 +163,8 @@
       "padding": 12
     },
     "dividers": {
-      "color": "#0D4F6E",
-      "width": 2,
+      "color": "#D7DEE8",
+      "width": 1,
       "style": "solid"
     }
   },
