@@ -83,11 +83,25 @@ Every HTML slide must include proper body dimensions:
 
 **Supported image formats:** PNG, JPG, GIF (via `<img>` tags)
 
-**PREFER generating diagrams** for any visual content rather than using placeholder text:
-- **Mermaid** diagrams for sequence diagrams, complex flowcharts, ER diagrams, state machines — write `.mmd` definition, render to PNG with `scripts/render-mermaid.js`
-- **SVG** diagrams for simple flowcharts, hub-and-spoke, layered architectures — generate SVG programmatically, rasterize to PNG with Sharp
+**Prefer real visuals over placeholder text.** For simple workflows and architecture diagrams, use editable HTML `<div>` shapes or add editable PptxGenJS shapes after conversion. Use raster images when editability is impractical.
+
+- **Editable shapes** for simple process flows, hubs, cards, boxes, and connector lines
+- **Mermaid** for sequence diagrams, complex flowcharts, ER diagrams, state machines — write `.mmd` definition, render to PNG with `scripts/render-mermaid.js`
+- **SVG** for precise custom illustrations — generate SVG programmatically, rasterize to PNG with Sharp
+- **Animation/video/GIF** for demonstrative content such as step-by-step workflows, algorithms, or state transitions
 
 ```html
+<!-- Editable workflow built from HTML shapes -->
+<div style="display: flex; gap: 12pt; align-items: center;">
+  <div style="width: 120pt; height: 48pt; background: #FFF1F1; border: 1pt solid #C62828; border-radius: 6pt;">
+    <p style="font-size: 11pt; font-weight: bold; text-align: center; margin-top: 14pt;">Input</p>
+  </div>
+  <p style="font-size: 18pt; color: #4E6E8E;">&#8594;</p>
+  <div style="width: 120pt; height: 48pt; background: #FFF8E1; border: 1pt solid #FFB300; border-radius: 6pt;">
+    <p style="font-size: 11pt; font-weight: bold; text-align: center; margin-top: 14pt;">Process</p>
+  </div>
+</div>
+
 <!-- Embed a rendered Mermaid diagram -->
 <img src="workspace/sequence-diagram.png" style="width: 500pt; height: auto; max-height: 200pt;">
 
@@ -99,14 +113,14 @@ Every HTML slide must include proper body dimensions:
   <img src="workspace/flowchart.png" style="width: 500pt; height: auto;">
 </div>
 
-<!-- Animated GIF (shows first frame in PPTX, animated in HTML) -->
+<!-- Animated GIF/video fallback for demonstrative content -->
 <img src="workspace/process-animation.gif" style="width: 400pt; height: auto;">
 ```
 
 #### Generating Mermaid Diagrams
 
 ```javascript
-const { renderMermaid } = require('./.claude/skills/pptx-enhanced/scripts/render-mermaid');
+const { renderMermaid } = require('./pptx-enhanced/scripts/render-mermaid');
 
 // Render inline definition to PNG
 await renderMermaid(`

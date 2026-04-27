@@ -1,14 +1,14 @@
 # pptx-enhanced
 
-Enhanced PowerPoint generation skill with an **Editorial Light** visual theme, 14 layout templates, Mermaid/SVG diagram rendering, and animated GIF capabilities via Manim.
+Enhanced PowerPoint generation skill with an **Editorial Light** visual theme, modular references, editable PowerPoint shape guidance, raster diagram fallback, and short animation workflows.
 
 ## Features
 
 - **Editorial Light Theme**: White-background presentations with red title typography, warm gold highlights, and slate-neutral supporting tones
-- **SVG Diagram Generation**: Programmatically generate flowcharts, architecture diagrams, and technical illustrations
-- **Mermaid Diagram Rendering**: Flowcharts, sequence diagrams, ER diagrams, Gantt charts via Playwright + CDN
+- **Editable Visuals First**: Build simple workflows and diagrams as PowerPoint-editable HTML/PptxGenJS shapes
+- **SVG/Mermaid Fallback**: Render complex diagrams to PNG when editable shapes are impractical
 - **Multi-format Image Support**: Embed SVG (rasterized), PNG, JPG, and GIF images
-- **Animated GIF Generation**: Create instructional visuals using Manim Community Edition
+- **Animation Generation**: Create short instructional animations using Manim, JS animation libraries, browser capture, or other suitable tooling
 - **HTML-to-PPTX Workflow**: Build slides using HTML templates, then convert to PowerPoint
 - **Fully Configurable**: Customize colors, fonts, and layouts via JSON configuration
 
@@ -18,14 +18,15 @@ Enhanced PowerPoint generation skill with an **Editorial Light** visual theme, 1
 
 1. **Install Node.js dependencies:**
    ```bash
-   cd .claude/skills/pptx-enhanced
+   cd pptx-enhanced
    npm install
    npm run install-browsers
    ```
+   `install-browsers` installs Playwright-managed Chromium so conversion does not need to launch your system Chrome app.
 
 2. **Install Python dependencies:**
    ```bash
-   pip install -r .claude/skills/pptx-enhanced/requirements.txt
+   pip install -r pptx-enhanced/requirements.txt
    ```
 
 3. **Install system requirements:**
@@ -56,6 +57,10 @@ pptx-enhanced/
 ├── README.md                  # This file
 ├── default-pptx-config.json   # Theme configuration
 ├── html2pptx.md              # HTML slide creation rules
+├── references/
+│   ├── layouts.md            # Compact layout catalog
+│   ├── visuals.md            # Editable diagrams, raster fallback, animation
+│   └── validation.md         # Validation workflow and common fixes
 ├── package.json              # Node.js dependencies
 ├── requirements.txt          # Python dependencies
 └── scripts/
@@ -67,10 +72,11 @@ pptx-enhanced/
 
 ## Workflow
 
-1. **HTML Creation**: Generate slides as HTML using predefined templates
-2. **Conversion**: Use `html2pptx.js` to convert HTML to PowerPoint
-3. **Validation**: Generate thumbnail grids with `thumbnail.py` for visual review
-4. **Refinement**: Extract text inventory with `inventory.py` for content review
+1. **Plan**: Pick slide layouts from `references/layouts.md`
+2. **Create**: Generate one HTML file per slide using `html2pptx.md`
+3. **Visualize**: Use editable shapes first; generate animations for demonstrative content
+4. **Convert**: Use `html2pptx.js` to convert HTML to PowerPoint
+5. **Validate**: Generate thumbnails when available and inspect text inventory
 
 ## Theme Colors
 
@@ -93,7 +99,7 @@ The skill supports various slide layouts:
 - Technical architecture diagrams
 - Full-slide visuals with overlays
 
-See `SKILL.md` for detailed layout specifications and examples.
+Start with `SKILL.md`, then open only the reference file needed for the task.
 
 ## License
 

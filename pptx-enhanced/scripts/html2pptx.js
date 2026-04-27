@@ -902,9 +902,10 @@ async function html2pptx(htmlFile, pres, options = {}) {
   } = options;
 
   try {
-    // Use Chrome on macOS, default Chromium on Unix
+    // Prefer Playwright-managed Chromium. Launching the user's system Chrome on
+    // macOS can show crash dialogs when sandboxed/headless automation is denied.
     const launchOptions = { env: { TMPDIR: tmpDir } };
-    if (process.platform === 'darwin') {
+    if (process.env.PPTX_ENHANCED_USE_SYSTEM_CHROME === '1') {
       launchOptions.channel = 'chrome';
     }
 
