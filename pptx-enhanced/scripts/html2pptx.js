@@ -165,7 +165,8 @@ function addElements(slideData, targetSlide, pres) {
         if (el.shape.transparency != null) shapeOptions.fill.transparency = el.shape.transparency;
       }
       if (el.shape.line) shapeOptions.line = el.shape.line;
-      if (el.shape.rectRadius > 0) shapeOptions.rectRadius = el.shape.rectRadius;
+      // roundRect adj must stay within 0-50% of the smaller side (circles request 1in)
+      if (el.shape.rectRadius > 0) shapeOptions.rectRadius = Math.min(el.shape.rectRadius, Math.min(el.position.w, el.position.h) / 2);
       if (el.shape.shadow) shapeOptions.shadow = el.shape.shadow;
 
       targetSlide.addText(el.text || '', shapeOptions);
