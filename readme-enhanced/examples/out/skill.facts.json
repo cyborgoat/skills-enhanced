@@ -1,0 +1,99 @@
+{
+  "root": "<skill>",
+  "commands": [
+    {
+      "cmd": "pip install -r requirements.txt",
+      "kind": "install",
+      "source": "requirements.txt"
+    }
+  ],
+  "runtime": {},
+  "generated_by": "inspect_project.py",
+  "name": "csv-cleaner",
+  "skill": {
+    "name": "csv-cleaner",
+    "description": "Clean and normalise CSV files. Use when the user asks to fix delimiters, trim whitespace, or deduplicate rows in a CSV.",
+    "license": "MIT"
+  },
+  "description": "Clean and normalise CSV files. Use when the user asks to fix delimiters, trim whitespace, or deduplicate rows in a CSV.",
+  "ecosystems": [
+    {
+      "ecosystem": "python",
+      "deps": [
+        "pandas"
+      ],
+      "scripts": {}
+    }
+  ],
+  "repo": {
+    "owner": "acme",
+    "name": "skill",
+    "url": "https://github.com/acme/skill",
+    "default_branch": null,
+    "latest_tag": null,
+    "subdir": ""
+  },
+  "license": {
+    "file": "LICENSE",
+    "spdx": "MIT",
+    "holder": "Acme Labs",
+    "year": "2026",
+    "inherited_from_repo_root": false
+  },
+  "ci": [],
+  "languages": [
+    {
+      "language": "Python",
+      "files": 1,
+      "share": 1.0
+    }
+  ],
+  "tree": [
+    {
+      "path": "scripts/",
+      "children": [
+        "clean.py"
+      ]
+    },
+    {
+      "path": "LICENSE",
+      "children": []
+    },
+    {
+      "path": "requirements.txt",
+      "children": []
+    },
+    {
+      "path": "SKILL.md",
+      "children": []
+    }
+  ],
+  "env_vars": [],
+  "config_files": [],
+  "script_files": [
+    {
+      "path": "scripts/clean.py",
+      "summary": "Normalise delimiters and whitespace in a CSV file"
+    }
+  ],
+  "packages": [],
+  "readme": {
+    "exists": false
+  },
+  "companion": {
+    "license": true,
+    "contributing": false,
+    "code_of_conduct": false,
+    "security": false,
+    "changelog": false,
+    "issue_templates": false
+  },
+  "has": {
+    "tests": false,
+    "docs": false,
+    "examples": false,
+    "docker": false
+  },
+  "project_type": "claude-skill",
+  "file_count": 4
+}

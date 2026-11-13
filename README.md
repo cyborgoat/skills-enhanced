@@ -37,6 +37,17 @@ Generate publication-quality, Tufte-inspired data visualizations with optional a
 
 **Technologies:** Python (matplotlib, seaborn, pandas, scipy, Pillow)
 
+### 📝 [README Writer](./readme-enhanced/)
+
+Write or improve the README of an open-source project from verified facts: inspect the repository, draft a README in a chosen style, and lint it before it ships.
+
+**Features:**
+- Repository inspection (manifests, scripts, licence, CI, structure) that records the source file of every fact
+- Three styles (minimal, standard, comprehensive) and nine project types; anything only a human can say becomes an explicit `<!-- ASK -->` marker
+- Linter for links and anchors, code fences, leftover placeholders, commands that do not exist in the project, badges, licence consistency and stale claims
+
+**Technologies:** Python 3.9+ (standard library only)
+
 ## Installation
 
 ### Quick Start

@@ -1,0 +1,122 @@
+{
+  "root": "<node-cli>",
+  "commands": [
+    {
+      "cmd": "npm install",
+      "kind": "install",
+      "source": "package.json"
+    },
+    {
+      "cmd": "npm test",
+      "kind": "test",
+      "source": "package.json scripts.test"
+    },
+    {
+      "cmd": "npm run lint",
+      "kind": "lint",
+      "source": "package.json scripts.lint"
+    },
+    {
+      "cmd": "npm run build",
+      "kind": "build",
+      "source": "package.json scripts.build"
+    }
+  ],
+  "runtime": {
+    "node": ">=18"
+  },
+  "generated_by": "inspect_project.py",
+  "name": "jsonq",
+  "description": "Query JSON from the command line with a tiny path syntax.",
+  "version": "1.2.0",
+  "license_declared": "MIT",
+  "ecosystems": [
+    {
+      "ecosystem": "node",
+      "deps": [],
+      "scripts": {
+        "test": "node --test test/",
+        "lint": "node --check bin/jsonq.js",
+        "build": "node bin/jsonq.js --version"
+      },
+      "bin": [
+        "jsonq"
+      ],
+      "workspaces": [],
+      "package_manager": "npm"
+    }
+  ],
+  "repo": {
+    "owner": "acme",
+    "name": "node-cli",
+    "url": "https://github.com/acme/node-cli",
+    "default_branch": null,
+    "latest_tag": null,
+    "subdir": ""
+  },
+  "license": {
+    "file": "LICENSE",
+    "spdx": "MIT",
+    "holder": "Acme Labs",
+    "year": "2026",
+    "inherited_from_repo_root": false
+  },
+  "ci": [],
+  "languages": [
+    {
+      "language": "JavaScript",
+      "files": 2,
+      "share": 1.0
+    }
+  ],
+  "tree": [
+    {
+      "path": "bin/",
+      "children": [
+        "jsonq.js"
+      ]
+    },
+    {
+      "path": "test/",
+      "children": [
+        "basic.test.js"
+      ]
+    },
+    {
+      "path": "LICENSE",
+      "children": []
+    },
+    {
+      "path": "package.json",
+      "children": []
+    }
+  ],
+  "env_vars": [],
+  "config_files": [],
+  "script_files": [
+    {
+      "path": "bin/jsonq.js",
+      "summary": "query JSON with a dotted path: echo '{\"a\":{\"b\":1}}' | jsonq a.b"
+    }
+  ],
+  "packages": [],
+  "readme": {
+    "exists": false
+  },
+  "companion": {
+    "license": true,
+    "contributing": false,
+    "code_of_conduct": false,
+    "security": false,
+    "changelog": false,
+    "issue_templates": false
+  },
+  "has": {
+    "tests": true,
+    "docs": false,
+    "examples": false,
+    "docker": false
+  },
+  "project_type": "cli",
+  "file_count": 4
+}

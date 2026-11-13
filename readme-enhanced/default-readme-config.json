@@ -1,0 +1,70 @@
+{
+  "styles": {
+    "minimal": {
+      "description": "Small projects, scripts, experiments: what it is, install, use, license.",
+      "sections": ["title", "badges", "description", "install", "usage", "license"],
+      "required": ["description", "install", "usage", "license"],
+      "maxBadges": 3,
+      "maxLines": 90,
+      "toc": "never"
+    },
+    "standard": {
+      "description": "Most open-source projects: adds highlights, configuration, development and contributing.",
+      "sections": ["title", "badges", "description", "highlights", "requirements", "install", "usage", "configuration", "development", "contributing", "license"],
+      "required": ["description", "install", "usage", "license"],
+      "maxBadges": 5,
+      "maxLines": 260,
+      "toc": "auto",
+      "tocMinHeadings": 9
+    },
+    "comprehensive": {
+      "description": "Larger or widely used projects: adds a table of contents, architecture, structure, roadmap, security and support.",
+      "sections": ["title", "badges", "description", "toc", "highlights", "requirements", "install", "usage", "configuration", "architecture", "packages", "structure", "development", "roadmap", "contributing", "security", "support", "license"],
+      "required": ["description", "install", "usage", "contributing", "license"],
+      "maxBadges": 6,
+      "maxLines": 520,
+      "toc": "required",
+      "tocMinHeadings": 6
+    }
+  },
+  "sections": {
+    "install": {"title": "Installation", "aliases": ["install", "installation", "getting started", "setup", "quick ?start"]},
+    "usage": {"title": "Usage", "aliases": ["usage", "^use$", "quick ?start", "getting started", "examples?", "how to use", "using", "^running"]},
+    "license": {"title": "License", "aliases": ["licen[cs]e", "licen[cs]ing"]},
+    "contributing": {"title": "Contributing", "aliases": ["contribut", "development", "developing"]},
+    "highlights": {"title": "Features", "aliases": ["features?", "highlights", "why", "what it does", "overview"]},
+    "requirements": {"title": "Requirements", "aliases": ["requirements?", "prerequisites?", "dependencies"]},
+    "configuration": {"title": "Configuration", "aliases": ["config", "environment", "options", "settings"]},
+    "development": {"title": "Development", "aliases": ["development", "developing", "testing", "tests", "building"]},
+    "architecture": {"title": "How it works", "aliases": ["architecture", "how it works", "design", "internals"]},
+    "packages": {"title": "Packages", "aliases": ["packages?", "skills", "modules", "components"]},
+    "structure": {"title": "Project structure", "aliases": ["structure", "layout", "repository"]},
+    "roadmap": {"title": "Roadmap", "aliases": ["roadmap", "planned", "todo"]},
+    "security": {"title": "Security", "aliases": ["security"]},
+    "support": {"title": "Support", "aliases": ["support", "help", "community", "getting help"]},
+    "description": {"title": "", "aliases": []}
+  },
+  "projectTypes": {
+    "library": {"usageTitle": "Usage", "order": ["install", "usage"], "hint": "Lead with install and a short code sample that shows the result."},
+    "cli": {"usageTitle": "Usage", "order": ["install", "usage"], "hint": "Show the command, its flags, and real output."},
+    "service": {"usageTitle": "Running", "order": ["requirements", "install", "configuration", "usage"], "hint": "Configuration and how to run come first."},
+    "web-app": {"usageTitle": "Running", "order": ["requirements", "install", "configuration", "usage"], "hint": "Add a screenshot; document env vars."},
+    "framework": {"usageTitle": "Quick start", "order": ["install", "usage"], "hint": "A working hello world in under ten lines; link to docs for concepts."},
+    "data-ml": {"usageTitle": "Usage", "order": ["requirements", "install", "usage"], "hint": "State data, model and hardware needs; show results, not claims."},
+    "claude-skill": {"usageTitle": "Usage", "order": ["install", "usage"], "hint": "Say how to install the skill and what to ask Claude."},
+    "monorepo": {"usageTitle": "Usage", "order": ["packages", "install", "usage"], "hint": "A table of packages first, then shared setup."},
+    "docs": {"usageTitle": "Usage", "order": ["install", "usage"], "hint": "How to build and preview the docs locally."}
+  },
+  "lint": {
+    "descriptionWithin": 18,
+    "descriptionMaxWords": 60,
+    "imageMaxBytes": 1000000,
+    "placeholders": [
+      "\\bTODO\\b", "\\bTBD\\b", "\\bFIXME\\b", "<!--\\s*ASK", "your-?_?username", "<repo-url>", "<your[^>]*>", "\\[INSERT", "lorem ipsum", "coming soon", "goes here", "yourproject", "your-project"
+    ],
+    "techLineWords": ["technologies", "built with", "tech stack", "stack:", "dependencies", "powered by"],
+    "staleStopwords": ["python", "node", "nodejs", "npm", "yarn", "pnpm", "pip", "git", "bash", "shell", "docker", "linux", "macos", "windows", "github", "json", "yaml", "html", "css", "markdown", "ssh", "http", "https", "api", "cli", "sdk", "url", "true", "false", "null", "none", "main", "master", "latest", "readme", "license", "mit", "brew", "make", "build", "test", "install", "run", "dev", "start", "help", "version", "claude", "anthropic", "mermaid", "shields"],
+    "companionFiles": ["LICENSE", "CONTRIBUTING", "CODE_OF_CONDUCT", "SECURITY", "CHANGELOG"],
+    "companionSeverity": {"LICENSE": "warn", "CONTRIBUTING": "info", "CODE_OF_CONDUCT": "info", "SECURITY": "info", "CHANGELOG": "info"}
+  }
+}
