@@ -18,6 +18,8 @@ import pandas as pd
 import yaml
 from bs4 import BeautifulSoup
 
+from dataio import clean_numeric, read_csv_smart, to_datetime_if_dates
+
 
 def detect_format(filepath: Path) -> str:
     """Detect input format from file extension."""
@@ -43,9 +45,9 @@ def detect_format(filepath: Path) -> str:
     return fmt
 
 
-def parse_csv(filepath: Path, delimiter: str = ",") -> pd.DataFrame:
-    """Parse CSV or TSV file."""
-    return pd.read_csv(filepath, delimiter=delimiter)
+def parse_csv(filepath: Path, delimiter: str | None = None) -> pd.DataFrame:
+    """Parse CSV or TSV file; the delimiter (, ; tab |) and decimal commas are detected."""
+    return read_csv_smart(filepath, delimiter)
 
 
 def parse_json(filepath: Path) -> pd.DataFrame:
@@ -158,21 +160,16 @@ def normalize(df: pd.DataFrame) -> pd.DataFrame:
     # Remove fully empty rows and columns
     df = df.dropna(how="all").dropna(axis=1, how="all")
 
-    # Auto-convert types
+    # Auto-convert types: numbers first ('1,200', '$3.1', '1.2%', '(45)' are understood), then dates
     for col in df.columns:
-        # Try numeric
-        converted = pd.to_numeric(df[col], errors="coerce")
-        if converted.notna().sum() > 0.5 * len(df):
-            df[col] = converted
+        numeric = clean_numeric(df[col])
+        if pd.api.types.is_numeric_dtype(numeric):
+            df[col] = numeric
             continue
-        # Try datetime
-        try:
-            dt = pd.to_datetime(df[col], infer_datetime_format=True, errors="coerce")
-            if dt.notna().sum() > 0.5 * len(df):
-                df[col] = dt
-                continue
-        except Exception:
-            pass
+        dates = to_datetime_if_dates(df[col])
+        if pd.api.types.is_datetime64_any_dtype(dates):
+            df[col] = dates
+            continue
         # Keep as string, strip whitespace
         df[col] = df[col].astype(str).str.strip()
         df[col] = df[col].replace({"nan": None, "None": None, "": None})
@@ -227,7 +224,7 @@ def main():
     # Parse input
     input_fmt = detect_format(args.input_file)
     parsers = {
-        "csv": lambda p: parse_csv(p, ","),
+        "csv": lambda p: parse_csv(p, None),
         "tsv": lambda p: parse_csv(p, "\t"),
         "json": parse_json,
         "excel": lambda p: parse_excel(p, args.sheet),

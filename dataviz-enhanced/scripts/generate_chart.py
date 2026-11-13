@@ -1,1073 +1,770 @@
 #!/usr/bin/env python3
-"""Core visualization engine — transforms structured data into publication-quality charts.
+"""Chart engine: data file -> publication-quality chart (Altair / Vega-Lite).
 
 Chart types: line, bar, hbar, scatter, histogram, heatmap, box, pie, donut,
              area, bubble, timeseries, small_multiples
 
+Outputs: .png .svg .pdf (no browser needed), .html (interactive) and .json (the Vega-Lite spec).
+
 Usage:
     python generate_chart.py <data> <output> --type TYPE --x COL --y COL [options]
-
-Examples:
-    python generate_chart.py data.csv chart.png --type bar --x category --y sales
-    python generate_chart.py data.csv chart.svg --type scatter --x age --y income --color region
-    python generate_chart.py data.csv chart.pdf --type line --x date --y price --trend linear
-    python generate_chart.py data.csv chart.png --type bar --x month --y revenue --highlights h.json
-    python generate_chart.py data.csv chart.png --type bar --x country --y cost --top 15 --title "Top 15"
-    python generate_chart.py data.csv chart.png --type hbar --x region --y cost --agg mean --groupby region
 """
 
 import argparse
+import copy
 import json
+import re
 import sys
-import textwrap
+from dataclasses import dataclass, field
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")  # Non-interactive backend
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import matplotlib.ticker as ticker
+import altair as alt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from scipy import stats
+
+from dataio import read_csv_smart, to_datetime_if_dates
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = SCRIPT_DIR.parent / "default-viz-config.json"
+PX = 96  # CSS pixels per inch; figsize (inches) * 96 = plot size, dpi / 96 = export scale
+NEEDS_Y = {"line", "bar", "hbar", "scatter", "bubble", "area", "timeseries", "pie", "donut", "small_multiples", "box"}
+DATE_LIKE = re.compile(r"^\d{4}-\d{1,2}(-\d{1,2})?([ T]\d{1,2}:\d{2})?")
+
+alt.data_transformers.disable_max_rows()
+
+
+def fail(msg: str, code: int = 1):
+    print(f"Error: {msg}", file=sys.stderr)
+    sys.exit(code)
+
 
 # ---------------------------------------------------------------------------
-# Data reduction helpers
+# Config, themes, palettes
 # ---------------------------------------------------------------------------
 
-MAX_LABEL_LEN = 20  # Truncate tick labels beyond this length
-LARGE_CATEGORY_THRESHOLD = 25  # Auto-warn / adjust when categories exceed this
+def deep_merge(base: dict, extra: dict) -> dict:
+    out = copy.deepcopy(base)
+    for k, v in (extra or {}).items():
+        out[k] = deep_merge(out[k], v) if isinstance(v, dict) and isinstance(out.get(k), dict) else copy.deepcopy(v)
+    return out
 
 
-def reduce_data(df: pd.DataFrame, y_col: str | list[str], **kwargs) -> pd.DataFrame:
-    """Apply data reduction pipeline: groupby+agg, sort, top/bottom, max-categories.
-
-    Order of operations:
-      1. groupby + agg (if both provided)
-      2. sort
-      3. top / bottom N
-      4. max_categories (group remainder into "Other")
-    """
-    y_primary = y_col[0] if isinstance(y_col, list) else y_col
-    x_col = kwargs.get("x_col")
-    groupby = kwargs.get("groupby")
-    agg_func = kwargs.get("agg")
-    top_n = kwargs.get("top")
-    bottom_n = kwargs.get("bottom")
-    sort_by = kwargs.get("sort_by")
-    sort_order = kwargs.get("sort_order", "desc")
-    max_categories = kwargs.get("max_categories")
-
-    # 1. Aggregation
-    if groupby and agg_func and groupby in df.columns:
-        agg_map = {"mean": "mean", "sum": "sum", "median": "median",
-                    "count": "count", "min": "min", "max": "max"}
-        func = agg_map.get(agg_func, "mean")
-        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-        agg_cols = [c for c in numeric_cols if c != groupby]
-        if not agg_cols:
-            agg_cols = [y_primary] if y_primary in df.columns else []
-        df = df.groupby(groupby, as_index=False)[agg_cols].agg(func)
-        # The groupby column becomes the x-axis if x_col matches
-        if x_col and x_col not in df.columns and groupby in df.columns:
-            df = df.rename(columns={groupby: x_col})
-
-    # 2. Sort
-    sort_col = sort_by or y_primary
-    if sort_col and sort_col in df.columns:
-        ascending = sort_order == "asc"
-        df = df.sort_values(sort_col, ascending=ascending).reset_index(drop=True)
-
-    # 3. Top / Bottom N
-    if top_n and top_n > 0:
-        if sort_col in df.columns:
-            df = df.nlargest(top_n, sort_col).reset_index(drop=True)
-            # Re-sort for display
-            df = df.sort_values(sort_col, ascending=False).reset_index(drop=True)
-    elif bottom_n and bottom_n > 0:
-        if sort_col in df.columns:
-            df = df.nsmallest(bottom_n, sort_col).reset_index(drop=True)
-            df = df.sort_values(sort_col, ascending=True).reset_index(drop=True)
-
-    # 4. Max categories — group remaining into "Other"
-    if max_categories and max_categories > 0 and x_col and x_col in df.columns:
-        if len(df) > max_categories:
-            top_df = df.head(max_categories)
-            rest = df.iloc[max_categories:]
-            other_row = {x_col: "Other"}
-            for c in df.columns:
-                if c == x_col:
-                    continue
-                if pd.api.types.is_numeric_dtype(df[c]):
-                    other_row[c] = rest[c].sum()
-                else:
-                    other_row[c] = "Other"
-            df = pd.concat([top_df, pd.DataFrame([other_row])], ignore_index=True)
-
-    return df
-
-
-def auto_figsize(n_categories: int, chart_type: str, base: list[float]) -> tuple[float, float]:
-    """Compute figure size that adapts to the number of categories."""
-    w, h = base
-    if chart_type in ("bar", "line", "area", "timeseries"):
-        if n_categories > 15:
-            w = max(w, n_categories * 0.45)
-        if n_categories > 30:
-            w = max(w, n_categories * 0.35)
-    elif chart_type == "hbar":
-        if n_categories > 12:
-            h = max(h, n_categories * 0.4)
-    elif chart_type in ("small_multiples",):
-        pass  # handled by its own logic
-    # Cap at reasonable limits
-    return (min(w, 30), min(h, 24))
-
-
-def smart_tick_labels(ax: plt.Axes, labels, axis: str = "x",
-                      max_label_len: int = MAX_LABEL_LEN) -> None:
-    """Apply smart rotation, truncation, and spacing to tick labels."""
-    if labels is None or len(labels) == 0:
-        return
-
-    n = len(labels)
-    str_labels = [str(l) for l in labels]
-
-    # Truncate long labels
-    truncated = []
-    for lab in str_labels:
-        if len(lab) > max_label_len:
-            truncated.append(lab[:max_label_len - 1] + "\u2026")
-        else:
-            truncated.append(lab)
-
-    # Decide rotation
-    max_len = max((len(l) for l in truncated), default=0)
-
-    if axis == "x":
-        if n > 30:
-            rotation, ha = 90, "center"
-        elif n > 15 or max_len > 10:
-            rotation, ha = 45, "right"
-        elif n > 8:
-            rotation, ha = 30, "right"
-        else:
-            rotation, ha = 0, "center"
-
-        ax.set_xticklabels(truncated, rotation=rotation, ha=ha)
-
-        # If still too many, thin out ticks
-        if n > 60:
-            every = max(1, n // 30)
-            for i, tick in enumerate(ax.xaxis.get_major_ticks()):
-                if i % every != 0:
-                    tick.set_visible(False)
-    else:
-        # Y-axis (hbar)
-        ax.set_yticklabels(truncated)
-
-
-def smart_legend(ax: plt.Axes, max_items: int = 15) -> None:
-    """Render a legend that doesn't overflow; move outside if many items."""
-    handles, labels = ax.get_legend_handles_labels()
-    if not handles:
-        return
-    n = len(handles)
-    if n <= 6:
-        ax.legend(frameon=False, fontsize=9)
-    elif n <= max_items:
-        ax.legend(frameon=False, fontsize=8, loc="upper left",
-                  bbox_to_anchor=(1.02, 1), borderaxespad=0)
-    else:
-        # Too many — show first max_items and note the rest
-        ax.legend(handles[:max_items], labels[:max_items],
-                  frameon=False, fontsize=8, loc="upper left",
-                  bbox_to_anchor=(1.02, 1), borderaxespad=0,
-                  title=f"Showing {max_items} of {n}")
-
-
-def group_small_slices(df: pd.DataFrame, x_col: str, y_col: str,
-                       max_slices: int = 10) -> pd.DataFrame:
-    """For pie/donut: group small slices into 'Other' to keep charts readable."""
-    if len(df) <= max_slices:
-        return df
-    df_sorted = df.sort_values(y_col, ascending=False).reset_index(drop=True)
-    top = df_sorted.head(max_slices - 1)
-    rest = df_sorted.iloc[max_slices - 1:]
-    other = pd.DataFrame([{x_col: "Other", y_col: rest[y_col].sum()}])
-    return pd.concat([top, other], ignore_index=True)
-
-
-def load_config(config_path: Path | None = None) -> dict:
-    """Load visualization config from JSON file."""
-    path = config_path or CONFIG_PATH
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+def load_config(config_path: Path | None = None, theme: str | None = None, preset: str | None = None) -> dict:
+    """Default config, then theme, then preset, then a user --config file (each merged over the last)."""
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        cfg = json.load(f)
+    for kind, name in (("themes", theme), ("presets", preset)):
+        if name:
+            if name not in cfg.get(kind, {}):
+                fail(f"Unknown {kind[:-1]} '{name}'. Available: {', '.join(cfg.get(kind, {}))}", 2)
+            cfg = deep_merge(cfg, cfg[kind][name])
+    if config_path:
+        with open(config_path, "r", encoding="utf-8") as f:
+            cfg = deep_merge(cfg, json.load(f))
+    return cfg
 
 
 def get_palette(config: dict, name: str | None = None) -> list[str]:
-    """Get a color palette by name, defaulting to colorblind."""
     palettes = config.get("palettes", {})
-    key = name or "colorblind"
-    if key in palettes:
-        return palettes[key]["colors"]
-    return palettes.get("colorblind", {}).get("colors", sns.color_palette("colorblind").as_hex())
+    key = name or config.get("default_palette", "colorblind")
+    return palettes.get(key, palettes["colorblind"])["colors"]
 
 
-def apply_tufte_style(ax: plt.Axes, config: dict) -> None:
-    """Apply Tufte-inspired minimal styling to an axes."""
-    chart_cfg = config.get("chart", {})
-    spine_cfg = chart_cfg.get("spines", {})
-    grid_cfg = chart_cfg.get("grid", {})
-    font_cfg = chart_cfg.get("fonts", {})
-
-    # Spines
-    for spine_name in ["top", "right", "left", "bottom"]:
-        visible = spine_cfg.get(spine_name, spine_name in ("left", "bottom"))
-        ax.spines[spine_name].set_visible(visible)
-        if visible:
-            ax.spines[spine_name].set_linewidth(spine_cfg.get("linewidth", 0.8))
-            ax.spines[spine_name].set_color(spine_cfg.get("color", "#333333"))
-
-    # Grid
-    if grid_cfg.get("show", True):
-        ax.grid(
-            True,
-            axis=grid_cfg.get("axis", "y"),
-            linestyle=grid_cfg.get("style", "dashed"),
-            alpha=grid_cfg.get("alpha", 0.3),
-            color=grid_cfg.get("color", "#cccccc"),
-            linewidth=grid_cfg.get("linewidth", 0.5),
-        )
-        ax.set_axisbelow(True)
-
-    # Tick label styling
-    tick_font = font_cfg.get("tick_label", {})
-    ax.tick_params(
-        labelsize=tick_font.get("size", 9),
-        colors=tick_font.get("color", "#4d4d4d"),
-    )
-
-
-def set_title_and_labels(ax: plt.Axes, config: dict, title: str | None,
-                         subtitle: str | None, xlabel: str | None, ylabel: str | None) -> None:
-    """Set title, subtitle, and axis labels with Tufte fonts."""
-    font_cfg = config.get("chart", {}).get("fonts", {})
-
-    if title:
-        title_font = font_cfg.get("title", {})
-        ax.set_title(
-            title,
-            fontfamily=title_font.get("family", "Georgia"),
-            fontsize=title_font.get("size", 16),
-            fontweight=title_font.get("weight", "bold"),
-            color=title_font.get("color", "#1a1a1a"),
-            pad=20 if subtitle else 10,
-            loc="left",
-        )
-
-    if subtitle:
-        sub_font = font_cfg.get("subtitle", {})
-        ax.text(
-            0.0, 1.02, subtitle,
-            transform=ax.transAxes,
-            fontfamily=sub_font.get("family", "Georgia"),
-            fontsize=sub_font.get("size", 12),
-            color=sub_font.get("color", "#4d4d4d"),
-            ha="left", va="bottom",
-        )
-
-    if xlabel:
-        label_font = font_cfg.get("axis_label", {})
-        ax.set_xlabel(
-            xlabel,
-            fontfamily=label_font.get("family", "Arial"),
-            fontsize=label_font.get("size", 11),
-            color=label_font.get("color", "#333333"),
-        )
-    if ylabel:
-        label_font = font_cfg.get("axis_label", {})
-        ax.set_ylabel(
-            ylabel,
-            fontfamily=label_font.get("family", "Arial"),
-            fontsize=label_font.get("size", 11),
-            color=label_font.get("color", "#333333"),
-        )
+def vl_config(config: dict, palette: list[str]) -> dict:
+    """Translate the skill config (fonts, spines, grid, palette) into a Vega-Lite config."""
+    ch = config.get("chart", {})
+    fonts, grid, spines = ch.get("fonts", {}), ch.get("grid", {}), ch.get("spines", {})
+    tick, axl, title, sub, leg = (fonts.get(k, {}) for k in ("tick_label", "axis_label", "title", "subtitle", "legend"))
+    dash = {"dashed": [4, 4], "dotted": [1, 3]}.get(grid.get("style", "dashed"))
+    axis = {
+        "labelFont": tick.get("family", "Arial"), "labelFontSize": tick.get("size", 9), "labelColor": tick.get("color", "#4d4d4d"),
+        "titleFont": axl.get("family", "Arial"), "titleFontSize": axl.get("size", 11), "titleColor": axl.get("color", "#333333"),
+        "titleFontWeight": "normal", "titlePadding": 8, "domainColor": spines.get("color", "#333333"),
+        "tickColor": spines.get("color", "#333333"), "domainWidth": spines.get("linewidth", 0.8),
+        "gridColor": grid.get("color", "#cccccc"), "gridOpacity": max(grid.get("alpha", 0.3), 0.5), "gridWidth": grid.get("linewidth", 0.5),
+        "labelPadding": 4, "labelOverlap": "parity",
+    }
+    if dash:
+        axis["gridDash"] = dash
+    return {
+        "font": axl.get("family", "Arial"),
+        "background": ch.get("background", "#ffffff"),
+        "view": {"stroke": None},
+        "axis": axis,
+        "axisX": {"grid": grid.get("show", True) and grid.get("axis", "y") in ("x", "both")},
+        "axisY": {"grid": grid.get("show", True) and grid.get("axis", "y") in ("y", "both")},
+        "title": {"anchor": "start", "font": title.get("family", "Georgia"), "fontSize": title.get("size", 16),
+                  "fontWeight": title.get("weight", "bold"), "color": title.get("color", "#1a1a1a"), "offset": 14,
+                  "subtitleFont": sub.get("family", "Georgia"), "subtitleFontSize": sub.get("size", 12),
+                  "subtitleColor": sub.get("color", "#4d4d4d"), "subtitlePadding": 6},
+        "legend": {"labelFont": leg.get("family", "Arial"), "labelFontSize": leg.get("size", 9), "labelColor": leg.get("color", "#333333"),
+                   "titleFont": leg.get("family", "Arial"), "titleFontSize": leg.get("size", 9), "titleColor": leg.get("color", "#333333"),
+                   "orient": "top", "direction": "horizontal", "padding": 0, "symbolType": "stroke", "symbolStrokeWidth": 3},
+        "range": {"category": palette},
+        "text": {"font": tick.get("family", "Arial")},
+    }
 
 
-def add_trend_line(ax: plt.Axes, x_vals: np.ndarray, y_vals: np.ndarray,
-                   config: dict, method: str = "linear", degree: int = 2) -> None:
-    """Add a trend line with optional R^2 annotation."""
-    stat_cfg = config.get("statistics", {})
-    trend_cfg = stat_cfg.get("trend_line", {})
-    annot_cfg = stat_cfg.get("annotation", {})
+# ---------------------------------------------------------------------------
+# Data helpers
+# ---------------------------------------------------------------------------
 
-    mask = np.isfinite(x_vals) & np.isfinite(y_vals)
-    x_clean, y_clean = x_vals[mask], y_vals[mask]
-    if len(x_clean) < 3:
-        return
-
-    x_sorted = np.sort(x_clean)
-    x_line = np.linspace(x_sorted.min(), x_sorted.max(), 200)
-
-    if method == "linear":
-        slope, intercept, r_value, p_value, _ = stats.linregress(x_clean, y_clean)
-        y_line = slope * x_line + intercept
-        label = f"R\u00b2={r_value**2:.3f}, p={p_value:.2e}"
-    else:
-        coeffs = np.polyfit(x_clean, y_clean, degree)
-        poly = np.poly1d(coeffs)
-        y_line = poly(x_line)
-        y_pred = poly(x_clean)
-        ss_res = np.sum((y_clean - y_pred) ** 2)
-        ss_tot = np.sum((y_clean - np.mean(y_clean)) ** 2)
-        r2 = 1 - ss_res / ss_tot if ss_tot != 0 else 0
-        label = f"R\u00b2={r2:.3f} (poly deg={degree})"
-
-    ax.plot(
-        x_line, y_line,
-        color=trend_cfg.get("color", "#999999"),
-        linestyle=trend_cfg.get("linestyle", "--"),
-        linewidth=trend_cfg.get("linewidth", 1.0),
-        alpha=trend_cfg.get("alpha", 0.7),
-        zorder=5,
-    )
-
-    # Confidence band
-    band_cfg = stat_cfg.get("confidence_band", {})
-    if method == "linear" and band_cfg.get("alpha", 0.15) > 0:
-        n = len(x_clean)
-        se = np.sqrt(np.sum((y_clean - (slope * x_clean + intercept)) ** 2) / (n - 2))
-        t_val = stats.t.ppf(0.975, n - 2)
-        x_mean = np.mean(x_clean)
-        x_var = np.sum((x_clean - x_mean) ** 2)
-        margin = t_val * se * np.sqrt(1 / n + (x_line - x_mean) ** 2 / x_var)
-        band_color = band_cfg.get("color") or trend_cfg.get("color", "#999999")
-        ax.fill_between(
-            x_line, y_line - margin, y_line + margin,
-            alpha=band_cfg.get("alpha", 0.15),
-            color=band_color,
-            zorder=4,
-        )
-
-    ax.annotate(
-        label,
-        xy=(0.98, 0.02), xycoords="axes fraction",
-        ha="right", va="bottom",
-        fontsize=annot_cfg.get("fontsize", 9),
-        color=annot_cfg.get("color", "#666666"),
-    )
+def safe_name(s):
+    """Vega field names must not contain . [ ] : or quotes."""
+    return re.sub(r"[.\[\]\\:'\"]", "_", s) if isinstance(s, str) else s
 
 
-def apply_highlights(ax: plt.Axes, df: pd.DataFrame, highlights: list[dict],
-                     config: dict, x_col: str, y_col: str) -> None:
-    """Render highlight overlays on the chart."""
-    hl_cfg = config.get("highlights", {})
+def load_df(path: Path) -> pd.DataFrame:
+    ext = path.suffix.lower()
+    if ext == ".json":
+        return pd.read_json(path)
+    if ext in (".xlsx", ".xls"):
+        return pd.read_excel(path, engine="openpyxl")
+    return read_csv_smart(path)
 
-    for hl in highlights:
-        idx = hl.get("index")
-        style = hl.get("suggested_style", "annotation_arrow")
-        label = hl.get("label", "")
-        styles = [style] if style != "combo" else hl_cfg.get("combo", {}).get("styles", ["color_shift", "annotation_arrow"])
 
-        if idx is None or idx >= len(df):
+def ftype(df: pd.DataFrame, col: str) -> str:
+    """'T' temporal, 'Q' quantitative, 'N' nominal."""
+    s = df[col]
+    if pd.api.types.is_datetime64_any_dtype(s):
+        return "T"
+    return "Q" if pd.api.types.is_numeric_dtype(s) else "N"
+
+
+def as_dates(df: pd.DataFrame, col: str) -> None:
+    """Turn a text column of ISO-like dates into datetimes (in place)."""
+    if not pd.api.types.is_numeric_dtype(df[col]) and not pd.api.types.is_datetime64_any_dtype(df[col]) \
+            and df[col].dropna().astype(str).str.match(DATE_LIKE).mean() > 0.8:
+        parsed = to_datetime_if_dates(df[col])
+        if pd.api.types.is_datetime64_any_dtype(parsed):
+            df[col] = parsed
+
+
+def reduce_data(df: pd.DataFrame, y_col: str | list[str], **kw) -> pd.DataFrame:
+    """groupby+agg -> sort -> top/bottom N -> max_categories ("Other")."""
+    y_primary = y_col[0] if isinstance(y_col, list) else y_col
+    x_col, groupby, agg_func = kw.get("x_col"), kw.get("groupby"), kw.get("agg")
+    top_n, bottom_n, max_categories = kw.get("top"), kw.get("bottom"), kw.get("max_categories")
+    sort_by, sort_order = kw.get("sort_by"), kw.get("sort_order", "desc")
+
+    if groupby and agg_func and groupby in df.columns:
+        numeric = [c for c in df.select_dtypes(include=[np.number]).columns if c != groupby]
+        cols = numeric or ([y_primary] if y_primary in df.columns else [])
+        df = df.groupby(groupby, as_index=False)[cols].agg(agg_func)
+        if x_col and x_col not in df.columns:
+            df = df.rename(columns={groupby: x_col})
+
+    sort_col = sort_by or y_primary
+    if sort_col in df.columns and (kw.get("sort_by") or top_n or bottom_n or groupby or max_categories):
+        df = df.sort_values(sort_col, ascending=sort_order == "asc").reset_index(drop=True)
+    if top_n and sort_col in df.columns:
+        df = df.nlargest(top_n, sort_col).sort_values(sort_col, ascending=False).reset_index(drop=True)
+    elif bottom_n and sort_col in df.columns:
+        df = df.nsmallest(bottom_n, sort_col).sort_values(sort_col, ascending=True).reset_index(drop=True)
+
+    if max_categories and x_col in df.columns and len(df) > max_categories:
+        top_df, rest = df.head(max_categories), df.iloc[max_categories:]
+        other = {c: (rest[c].sum() if pd.api.types.is_numeric_dtype(df[c]) else "Other") for c in df.columns}
+        other[x_col] = "Other"
+        df = pd.concat([top_df, pd.DataFrame([other])], ignore_index=True)
+    return df
+
+
+def apply_order(df: pd.DataFrame, x_col: str, order: list[str]) -> pd.DataFrame:
+    """Reorder rows so the categories in x_col follow `order` (others last, original order kept)."""
+    rank = df[x_col].astype(str).map({v: i for i, v in enumerate(order)}).fillna(len(order))
+    return df.assign(_o=rank).sort_values("_o", kind="stable").drop(columns="_o").reset_index(drop=True)
+
+
+def group_small_slices(df: pd.DataFrame, x_col: str, y_col: str, max_slices: int = 10) -> pd.DataFrame:
+    df = df.sort_values(y_col, ascending=False).reset_index(drop=True)
+    if len(df) <= max_slices:
+        return df
+    other = pd.DataFrame([{x_col: "Other", y_col: df.iloc[max_slices - 1:][y_col].sum()}])
+    return pd.concat([df.head(max_slices - 1), other], ignore_index=True)
+
+
+# ---------------------------------------------------------------------------
+# Encoding helpers
+# ---------------------------------------------------------------------------
+
+@dataclass
+class Ctx:
+    x: str
+    ys: list
+    config: dict
+    palette: list
+    W: int
+    H: int
+    kw: dict = field(default_factory=dict)
+
+    @property
+    def ct(self) -> dict:
+        return self.config.get("chart_types", {})
+
+    @property
+    def y(self) -> str:
+        return self.ys[0]
+
+    @property
+    def fonts(self) -> dict:
+        return self.config.get("chart", {}).get("fonts", {})
+
+    @property
+    def ink(self) -> str:
+        """Dark text colour for labels (not the title colour, which themes may set to an accent)."""
+        return self.fonts.get("annotation", {}).get("color", "#333333")
+
+
+def x_axis(labels, horizontal_title) -> alt.Axis:
+    """Category axis: tilt long or numerous labels instead of truncating them."""
+    n = len(labels)
+    longest = max((len(str(v)) for v in labels), default=0)
+    angle = -90 if n > 30 else -45 if (n > 10 or longest > 10) else 0
+    return alt.Axis(labelAngle=angle, labelLimit=240, title=horizontal_title, grid=False, ticks=False)
+
+
+def num_axis(values, **kw) -> alt.Axis:
+    """Numeric axis: whole numbers (years, counts) get integer ticks and no thousands separator."""
+    v = pd.to_numeric(pd.Series(values), errors="coerce").dropna()
+    if len(v) and (v % 1 == 0).all():
+        return alt.Axis(format="d", tickMinStep=1, tickCount=8, **kw)
+    return alt.Axis(format="~g", tickCount=8, **kw)
+
+
+def date_axis(series: pd.Series, title) -> alt.Axis:
+    span = (series.max() - series.min()).days if len(series.dropna()) else 0
+    fmt = "%Y" if span > 365 * 4 else "%b %Y" if span > 60 else None
+    return alt.Axis(grid=False, title=title, format=fmt, tickCount=8 if fmt else alt.Undefined, labelAngle=0)
+
+
+def x_enc(df: pd.DataFrame, c: Ctx, title, force_t: bool = False, zero: bool = False):
+    t = "T" if force_t else ftype(df, c.x)
+    if t == "T":
+        return alt.X(field=c.x, type="temporal", title=title, axis=date_axis(pd.to_datetime(df[c.x]), title))
+    if t == "Q":
+        return alt.X(field=c.x, type="quantitative", title=title, scale=alt.Scale(zero=zero, nice=True), axis=num_axis(df[c.x], grid=False, title=title))
+    return alt.X(field=c.x, type="nominal", sort=None, axis=x_axis(df[c.x].tolist(), title))
+
+
+def y_enc(field_name, title, zero: bool = True, domain=None, **kw):
+    scale = alt.Scale(domain=domain, nice=False) if domain else (alt.Scale(zero=True, nice=True) if zero else alt.Scale(zero=False, nice=True, padding=12))
+    return alt.Y(field=field_name, type="quantitative", title=title, scale=scale, axis=alt.Axis(tickCount=6, title=title), **kw)
+
+
+def padded_domain(values):
+    """Y domain with headroom for value labels; extra room below zero when bars go negative."""
+    v = pd.to_numeric(pd.Series(values), errors="coerce").dropna()
+    lo, hi = float(min(v.min(), 0)), float(max(v.max(), 0))
+    pad = (hi - lo) * 0.1 or 1
+    return [lo - pad if lo < 0 else 0, hi + pad if hi > 0 else 0]
+
+
+def series_color(names, palette, show_legend=True, symbol="stroke"):
+    return alt.Color("series:N", scale=alt.Scale(domain=list(names), range=[palette[i % len(palette)] for i in range(len(names))]),
+                     legend=alt.Legend(title=None, symbolType=symbol, symbolSize=140 if symbol != "stroke" else 100) if show_legend else None)
+
+
+def long_form(df, c: Ctx) -> pd.DataFrame:
+    return df.melt(id_vars=[c.x], value_vars=c.ys, var_name="series", value_name="value")
+
+
+def labels(c: Ctx):
+    k = c.kw
+    xl = k.get("xlabel") if k.get("xlabel") is not None else c.x
+    yl = k.get("ylabel") if k.get("ylabel") is not None else (c.y if len(c.ys) == 1 else None)
+    return (xl or None), (yl or None)
+
+
+# ---------------------------------------------------------------------------
+# Highlights and trend lines (layers)
+# ---------------------------------------------------------------------------
+
+def highlight_layers(df: pd.DataFrame, c: Ctx, chart_type: str, highlights: list[dict], force_t: bool = False) -> list:
+    hl_cfg = c.config.get("highlights", {})
+    horizontal = chart_type == "hbar"
+    t = "T" if force_t else ftype(df, c.x)
+    cats = df[c.x].tolist()
+    y_all = df[c.ys].select_dtypes(include=[np.number])
+    y_lo, y_hi = float(y_all.min().min()), float(y_all.max().max())
+    y_mid = float(np.nanmedian(df[c.y]))
+    rows = []
+    for h in highlights:
+        i = h.get("index")
+        if i is None or not (0 <= i < len(df)):
             continue
-
-        x_val = df[x_col].iloc[idx]
-        y_val = df[y_col].iloc[idx]
-
-        # Convert categorical x to position index for bar-like charts
-        try:
-            x_pos = float(x_val)
-        except (ValueError, TypeError):
-            x_pos = idx
-
+        styles = hl_cfg.get("combo", {}).get("styles", ["color_shift", "annotation_arrow"]) if h.get("suggested_style") == "combo" else [h.get("suggested_style", "annotation_arrow")]
+        xv = df[c.x].iloc[i]
+        yv = float(df[c.y].iloc[i])
         for s in styles:
-            style_cfg = hl_cfg.get(s, {})
+            rows.append({"x": xv, "y": yv, "label": h.get("label") or f"{yv:g}", "style": s, "above": yv >= y_mid})
+    if not rows:
+        return []
+    hd = pd.DataFrame(rows)
+    if t == "T":
+        hd["x"] = pd.to_datetime(hd["x"])
+    ex, ey = ("y", "x") if horizontal else ("x", "y")
+    xtype = "quantitative" if horizontal else {"T": "temporal", "Q": "quantitative", "N": "nominal"}[t]
+    ytype = "nominal" if horizontal else "quantitative"
+    if horizontal:
+        enc_x = alt.X("y:Q")
+        enc_y = alt.Y("x:N", scale=alt.Scale(domain=cats))
+    else:
+        enc_x = alt.X("x:T") if t == "T" else alt.X("x:Q") if t == "Q" else alt.X("x:N", scale=alt.Scale(domain=cats))
+        enc_y = alt.Y("y:Q")
 
-            if s == "halo_ring":
-                ax.scatter(
-                    [x_pos], [y_val],
-                    s=style_cfg.get("size_multiplier", 3.0) * 100,
-                    facecolors="none",
-                    edgecolors=style_cfg.get("color", "#D55E00"),
-                    linewidths=style_cfg.get("linewidth", 2.0),
-                    alpha=style_cfg.get("alpha", 0.4),
-                    zorder=10,
-                )
+    def style_cfg(s):
+        return hl_cfg.get(s, {})
 
-            elif s == "color_shift":
-                ax.scatter(
-                    [x_pos], [y_val],
-                    s=80,
-                    color=style_cfg.get("color", "#D55E00"),
-                    alpha=style_cfg.get("alpha", 1.0),
-                    zorder=10,
-                )
+    def pts(sub, **mark):
+        return alt.Chart(sub).mark_point(**mark).encode(x=enc_x, y=enc_y)
 
-            elif s == "size_boost":
-                ax.scatter(
-                    [x_pos], [y_val],
-                    s=style_cfg.get("size_multiplier", 2.5) * 60,
-                    color=style_cfg.get("color", "#D55E00"),
-                    alpha=0.8,
-                    zorder=10,
-                )
+    layers = []
+    for s, sub in hd.groupby("style", sort=False):
+        sc = style_cfg(s)
+        color = sc.get("color", "#D55E00")
+        if s == "halo_ring":
+            layers.append(pts(sub, filled=False, size=sc.get("size_multiplier", 3.0) * 140, stroke=color, strokeWidth=sc.get("linewidth", 2.0), opacity=0.7))
+        elif s == "color_shift":
+            layers.append(pts(sub, filled=True, size=120, color=color, opacity=1, stroke="#ffffff", strokeWidth=1.2))
+        elif s == "size_boost":
+            layers.append(pts(sub, filled=True, size=sc.get("size_multiplier", 2.5) * 70, color=color, opacity=0.85))
+        elif s == "glow":
+            layers.append(pts(sub, filled=True, size=sc.get("size_multiplier", 5.0) * 100, color=color, opacity=sc.get("alpha", 0.3)))
+        elif s == "marker_change":
+            layers.append(pts(sub, filled=True, shape="diamond", size=sc.get("size_multiplier", 1.8) * 90, color=hl_cfg.get("color_shift", {}).get("color", color)))
+        elif s == "annotation_arrow":
+            fs = sc.get("fontsize", c.fonts.get("annotation", {}).get("size", 9))
+            bars = chart_type in ("bar", "hbar")
+            if not bars:
+                layers.append(pts(sub, filled=True, size=70, color=sc.get("color", c.ink), opacity=1))
+            for above, grp in sub.groupby("above"):
+                layers.append(alt.Chart(grp).mark_text(dy=(-30 if bars and not horizontal else -16 if horizontal else -14) if above else 18, dx=(40 if horizontal else 0), fontSize=fs, fontWeight="bold", color=sc.get("color", c.ink))
+                              .encode(x=enc_x, y=enc_y, text="label:N"))
+        elif s == "band_shade":
+            band = sub.copy()
+            lo = min(0.0, y_lo) if chart_type in ("bar", "hbar") else y_lo - 0.02 * (y_hi - y_lo)  # bar bands span from the baseline
+            band["lo"], band["hi"] = lo, y_hi + 0.02 * (y_hi - y_lo)
+            opacity = max(sc.get("alpha", 0.1), 0.18)
+            if horizontal:
+                layers.append(alt.Chart(band).mark_bar(color=color, opacity=opacity).encode(y=alt.Y("x:N", scale=alt.Scale(domain=cats)), x=alt.X("lo:Q"), x2="hi:Q"))
+            elif t == "N":
+                layers.append(alt.Chart(band).mark_bar(color=color, opacity=opacity).encode(x=alt.X("x:N", scale=alt.Scale(domain=cats)), y=alt.Y("lo:Q"), y2="hi:Q"))
+            else:
+                xs = pd.to_datetime(df[c.x]) if t == "T" else df[c.x].astype(float)
+                step = xs.diff().abs().median()
+                half = step * 0.4 if t == "T" else float(step) * 0.4
+                band["x0"], band["x1"] = band["x"] - half, band["x"] + half
+                bt = "temporal" if t == "T" else "quantitative"
+                layers.append(alt.Chart(band).mark_rect(color=color, opacity=opacity).encode(x=alt.X("x0", type=bt), x2="x1", y=alt.Y("lo:Q"), y2="hi:Q"))
+    return layers
 
-            elif s == "glow":
-                ax.scatter(
-                    [x_pos], [y_val],
-                    s=style_cfg.get("size_multiplier", 5.0) * 100,
-                    color=style_cfg.get("color", "#F0E442"),
-                    alpha=style_cfg.get("alpha", 0.3),
-                    zorder=3,
-                )
 
-            elif s == "annotation_arrow":
-                offset = style_cfg.get("offset", [30, 30])
-                ax.annotate(
-                    label or f"{y_val}",
-                    xy=(x_pos, y_val),
-                    xytext=(offset[0], offset[1]),
-                    textcoords="offset points",
-                    fontsize=style_cfg.get("fontsize", 9),
-                    color=style_cfg.get("color", "#333333"),
-                    arrowprops=dict(
-                        arrowstyle=style_cfg.get("arrowstyle", "->"),
-                        color=style_cfg.get("color", "#333333"),
-                        connectionstyle=style_cfg.get("connectionstyle", "arc3,rad=0.2"),
-                    ),
-                    zorder=15,
-                )
+def trend_layers(df: pd.DataFrame, c: Ctx, force_t: bool = False) -> list:
+    method = c.kw.get("trend")
+    if not method:
+        return []
+    st = c.config.get("statistics", {})
+    tcfg, acfg, bcfg = st.get("trend_line", {}), st.get("annotation", {}), st.get("confidence_band", {})
+    is_t = force_t or ftype(df, c.x) == "T"
+    xs = pd.to_datetime(df[c.x]) if is_t else pd.to_numeric(df[c.x], errors="coerce")
+    x0 = xs.min()
+    x_num = ((xs - x0).dt.total_seconds() / 86400).to_numpy() if is_t else xs.to_numpy(dtype=float)
+    y_num = pd.to_numeric(df[c.y], errors="coerce").to_numpy(dtype=float)
+    m = np.isfinite(x_num) & np.isfinite(y_num)
+    x_c, y_c = x_num[m], y_num[m]
+    if len(x_c) < 3:
+        print("Warning: not enough numeric points for a trend line", file=sys.stderr)
+        return []
+    grid = np.linspace(x_c.min(), x_c.max(), 120)
+    margin = None
+    if method == "linear":
+        slope, icpt, r, p, _ = stats.linregress(x_c, y_c)
+        yl = slope * grid + icpt
+        label = f"R²={r ** 2:.3f}, p={p:.2e}"
+        n = len(x_c)
+        if n > 2 and bcfg.get("alpha", 0.15) > 0:
+            se = np.sqrt(np.sum((y_c - (slope * x_c + icpt)) ** 2) / (n - 2))
+            margin = stats.t.ppf(0.975, n - 2) * se * np.sqrt(1 / n + (grid - x_c.mean()) ** 2 / np.sum((x_c - x_c.mean()) ** 2))
+    else:
+        deg = c.kw.get("degree", 2)
+        poly = np.poly1d(np.polyfit(x_c, y_c, deg))
+        yl = poly(grid)
+        ss_tot = np.sum((y_c - y_c.mean()) ** 2)
+        r2 = 1 - np.sum((y_c - poly(x_c)) ** 2) / ss_tot if ss_tot else 0
+        label = f"R²={r2:.3f} (poly deg={deg})"
+    gx = x0 + pd.to_timedelta(grid, unit="D") if is_t else grid
+    td = pd.DataFrame({"x": gx, "y": yl})
+    xt = "temporal" if is_t else "quantitative"
+    color = tcfg.get("color", "#999999")
+    layers = []
+    if margin is not None:
+        band = pd.DataFrame({"x": gx, "lo": yl - margin, "hi": yl + margin})
+        layers.append(alt.Chart(band).mark_area(color=bcfg.get("color") or color, opacity=bcfg.get("alpha", 0.15))
+                      .encode(x=alt.X("x", type=xt), y=alt.Y("lo:Q"), y2="hi:Q"))
+    layers.append(alt.Chart(td).mark_line(color=color, strokeDash=[5, 4], strokeWidth=tcfg.get("linewidth", 1.0) + 0.5, opacity=0.9)
+                  .encode(x=alt.X("x", type=xt), y=alt.Y("y:Q")))
+    ann = pd.DataFrame({"x": [gx[-1]], "y": [float(np.nanmin(y_c))], "t": [label]})
+    layers.append(alt.Chart(ann).mark_text(align="right", baseline="bottom", dx=-4, dy=-4, fontSize=acfg.get("fontsize", 9), color=acfg.get("color", "#666666"))
+                  .encode(x=alt.X("x", type=xt), y=alt.Y("y:Q"), text="t:N"))
+    return layers
 
-            elif s == "band_shade":
-                width = style_cfg.get("width", 0.5)
-                ax.axvspan(
-                    x_pos - width / 2, x_pos + width / 2,
-                    color=style_cfg.get("color", "#D55E00"),
-                    alpha=style_cfg.get("alpha", 0.1),
-                    zorder=1,
-                )
 
-            elif s == "marker_change":
-                ax.scatter(
-                    [x_pos], [y_val],
-                    s=style_cfg.get("size_multiplier", 1.8) * 60,
-                    marker=style_cfg.get("marker", "D"),
-                    color=hl_cfg.get("color_shift", {}).get("color", "#D55E00"),
-                    zorder=10,
-                )
+def finish(layers: list, df, c: Ctx, chart_type: str, force_t: bool = False) -> alt.LayerChart:
+    """Add trend and highlight layers on top of the base marks."""
+    layers = list(layers) + trend_layers(df, c, force_t)
+    hp = c.kw.get("highlights")
+    if hp:
+        with open(hp, "r", encoding="utf-8") as f:
+            hl = highlight_layers(df, c, chart_type, json.load(f), force_t)
+        is_band = [getattr(l.mark, "type", "") in ("bar", "rect") for l in hl]
+        layers = [l for l, b in zip(hl, is_band) if b] + layers + [l for l, b in zip(hl, is_band) if not b]  # bands sit behind the data
+    return alt.layer(*layers) if len(layers) > 1 else layers[0]
 
 
 # ---------------------------------------------------------------------------
-# Chart type renderers
+# Chart builders
 # ---------------------------------------------------------------------------
 
-def chart_line(ax: plt.Axes, df: pd.DataFrame, x: str, y: str | list[str],
-               config: dict, palette: list[str], **kwargs) -> None:
-    """Render a line chart."""
-    ct = config.get("chart_types", {}).get("line", {})
-    y_cols = y if isinstance(y, list) else [y]
-
-    # Suppress markers for large datasets to avoid clutter
-    n_points = len(df)
-    marker = ct.get("marker", "o") if n_points <= 50 else None
-    markersize = ct.get("markersize", 4)
-
-    for i, col in enumerate(y_cols):
-        color = palette[i % len(palette)]
-        ax.plot(
-            df[x], df[col],
-            color=color,
-            linewidth=ct.get("linewidth", 2.0),
-            marker=marker,
-            markersize=markersize,
-            alpha=ct.get("alpha", 1.0),
-            label=col,
-        )
-    if len(y_cols) > 1:
-        smart_legend(ax)
-
-    # Smart x-tick labels for categorical x-axis
-    if not pd.api.types.is_numeric_dtype(df[x]):
-        positions = np.arange(len(df))
-        ax.set_xticks(positions)
-        smart_tick_labels(ax, df[x].values, axis="x")
-
-
-def chart_bar(ax: plt.Axes, df: pd.DataFrame, x: str, y: str | list[str],
-              config: dict, palette: list[str], **kwargs) -> None:
-    """Render a vertical bar chart."""
-    ct = config.get("chart_types", {}).get("bar", {})
-    y_cols = y if isinstance(y, list) else [y]
-    n = len(y_cols)
-    width = ct.get("width", 0.7) / n
-    positions = np.arange(len(df))
-
-    for i, col in enumerate(y_cols):
-        offset = (i - n / 2 + 0.5) * width
-        ax.bar(
-            positions + offset,
-            df[col],
-            width=width,
-            color=palette[i % len(palette)],
-            edgecolor=ct.get("edgecolor", "#ffffff"),
-            linewidth=ct.get("edgewidth", 0.5),
-            alpha=ct.get("alpha", 0.9),
-            label=col,
-        )
-
-    ax.set_xticks(positions)
-    smart_tick_labels(ax, df[x].values, axis="x")
-    if n > 1:
-        smart_legend(ax)
-
-
-def chart_hbar(ax: plt.Axes, df: pd.DataFrame, x: str, y: str,
-               config: dict, palette: list[str], **kwargs) -> None:
-    """Render a horizontal bar chart."""
-    ct = config.get("chart_types", {}).get("hbar", {})
-    positions = np.arange(len(df))
-    ax.barh(
-        positions,
-        df[y],
-        height=ct.get("height", 0.7),
-        color=[palette[i % len(palette)] for i in range(len(df))],
-        edgecolor=ct.get("edgecolor", "#ffffff"),
-        linewidth=ct.get("edgewidth", 0.5),
-        alpha=ct.get("alpha", 0.9),
-    )
-    ax.set_yticks(positions)
-    smart_tick_labels(ax, df[x].values, axis="y")
-    ax.invert_yaxis()
-
-
-def chart_scatter(ax: plt.Axes, df: pd.DataFrame, x: str, y: str,
-                  config: dict, palette: list[str], **kwargs) -> None:
-    """Render a scatter plot with optional color grouping."""
-    ct = config.get("chart_types", {}).get("scatter", {})
-    color_col = kwargs.get("color")
-
-    # Reduce alpha for very large datasets to avoid overplotting
-    n_points = len(df)
-    alpha = ct.get("alpha", 0.7)
-    size = ct.get("size", 40)
-    if n_points > 500:
-        alpha = min(alpha, 0.4)
-        size = max(15, size * 0.6)
-    elif n_points > 200:
-        alpha = min(alpha, 0.5)
-        size = max(20, size * 0.8)
-
-    if color_col and color_col in df.columns:
-        groups = df[color_col].unique()
-        for i, group in enumerate(groups):
-            mask = df[color_col] == group
-            ax.scatter(
-                df.loc[mask, x], df.loc[mask, y],
-                s=size,
-                color=palette[i % len(palette)],
-                alpha=alpha,
-                edgecolors=ct.get("edgecolor", "#ffffff"),
-                linewidths=ct.get("edgewidth", 0.5),
-                label=str(group),
-            )
-        smart_legend(ax)
+def build_line(df, c: Ctx, force_t: bool = False):
+    ct = c.ct.get("timeseries" if force_t else "line", {})
+    as_dates(df, c.x) if force_t or ftype(df, c.x) == "N" else None
+    if force_t:
+        df[c.x] = pd.to_datetime(df[c.x], errors="coerce")
+    xl, yl = labels(c)
+    point = alt.OverlayMarkDef(size=ct.get("markersize", 4) ** 2 * 1.6, filled=True, **({} if len(c.ys) > 1 else {"color": c.palette[0]})) if (len(df) <= 50 and not force_t) else False
+    mark = dict(strokeWidth=ct.get("linewidth", 2.0), point=point, interpolate="linear")
+    if len(c.ys) > 1:
+        base = alt.Chart(long_form(df, c)).mark_line(**mark).encode(
+            x=x_enc(df, c, xl, force_t), y=y_enc("value", yl, zero=False), color=series_color(c.ys, c.palette))
     else:
-        ax.scatter(
-            df[x], df[y],
-            s=size,
-            color=palette[0],
-            alpha=alpha,
-            edgecolors=ct.get("edgecolor", "#ffffff"),
-            linewidths=ct.get("edgewidth", 0.5),
-        )
+        base = alt.Chart(df).mark_line(color=c.palette[0], **mark).encode(x=x_enc(df, c, xl, force_t), y=y_enc(c.y, yl, zero=False))
+    return finish([base], df, c, "line", force_t)
 
 
-def chart_histogram(ax: plt.Axes, df: pd.DataFrame, x: str, y: str | None,
-                    config: dict, palette: list[str], **kwargs) -> None:
-    """Render a histogram."""
-    ct = config.get("chart_types", {}).get("histogram", {})
-    col = y or x
-    ax.hist(
-        df[col].dropna(),
-        bins=kwargs.get("bins") or ct.get("bins", 30),
-        color=palette[0],
-        edgecolor=ct.get("edgecolor", "#ffffff"),
-        linewidth=ct.get("edgewidth", 0.5),
-        alpha=ct.get("alpha", 0.8),
-    )
+def build_timeseries(df, c: Ctx):
+    return build_line(df, c, force_t=True)
 
 
-def chart_heatmap(ax: plt.Axes, df: pd.DataFrame, x: str | None, y: str | None,
-                  config: dict, palette: list[str], **kwargs) -> None:
-    """Render a heatmap from numeric columns."""
-    ct = config.get("chart_types", {}).get("heatmap", {})
-    numeric = df.select_dtypes(include=[np.number])
-    if x and y:
-        pivot = df.pivot_table(index=y, columns=x, aggfunc="mean")
-        if pivot.columns.nlevels > 1:
-            pivot.columns = pivot.columns.droplevel(0)
-        data = pivot
-    else:
-        data = numeric.corr() if numeric.shape[1] > 1 else numeric
-
-    sns.heatmap(
-        data, ax=ax,
-        cmap=ct.get("cmap", "YlOrRd"),
-        annot=ct.get("annot", True),
-        fmt=ct.get("fmt", ".1f"),
-        linewidths=ct.get("linewidths", 0.5),
-        linecolor=ct.get("linecolor", "#ffffff"),
-        cbar_kws={"shrink": 0.8},
-    )
-
-
-def chart_box(ax: plt.Axes, df: pd.DataFrame, x: str | None, y: str,
-              config: dict, palette: list[str], **kwargs) -> None:
-    """Render a box plot."""
-    ct = config.get("chart_types", {}).get("box", {})
-    if x and x in df.columns:
-        groups = df[x].unique()
-        data = [df.loc[df[x] == g, y].dropna().values for g in groups]
-        bp = ax.boxplot(
-            data,
-            widths=ct.get("width", 0.6),
-            patch_artist=True,
-            flierprops=dict(markersize=ct.get("fliersize", 4)),
-        )
-        for i, patch in enumerate(bp["boxes"]):
-            patch.set_facecolor(palette[i % len(palette)])
-            patch.set_alpha(0.8)
-        smart_tick_labels(ax, groups, axis="x")
-    else:
-        cols = [y] if isinstance(y, str) else y
-        data = [df[c].dropna().values for c in cols]
-        bp = ax.boxplot(
-            data,
-            widths=ct.get("width", 0.6),
-            patch_artist=True,
-            flierprops=dict(markersize=ct.get("fliersize", 4)),
-        )
-        for i, patch in enumerate(bp["boxes"]):
-            patch.set_facecolor(palette[i % len(palette)])
-            patch.set_alpha(0.8)
-        ax.set_xticklabels(cols)
-
-
-def chart_pie(ax: plt.Axes, df: pd.DataFrame, x: str, y: str,
-              config: dict, palette: list[str], **kwargs) -> None:
-    """Render a pie chart — auto-groups small slices into 'Other'."""
-    ct = config.get("chart_types", {}).get("pie", {})
-    max_slices = kwargs.get("max_categories") or 10
-    df = group_small_slices(df, x, y, max_slices=max_slices)
-    colors = [palette[i % len(palette)] for i in range(len(df))]
-    ax.pie(
-        df[y],
-        labels=df[x],
-        colors=colors,
-        startangle=ct.get("startangle", 90),
-        autopct=ct.get("autopct", "%1.1f%%"),
-        pctdistance=ct.get("pctdistance", 0.75),
-        shadow=ct.get("shadow", False),
-        textprops={"fontsize": 9},
-    )
-    ax.set_aspect("equal")
-
-
-def chart_donut(ax: plt.Axes, df: pd.DataFrame, x: str, y: str,
-                config: dict, palette: list[str], **kwargs) -> None:
-    """Render a donut chart — auto-groups small slices into 'Other'."""
-    ct = config.get("chart_types", {}).get("donut", {})
-    max_slices = kwargs.get("max_categories") or 10
-    df = group_small_slices(df, x, y, max_slices=max_slices)
-    colors = [palette[i % len(palette)] for i in range(len(df))]
-    wedge_width = ct.get("wedgeprops_width", 0.4)
-    wedges, texts, autotexts = ax.pie(
-        df[y],
-        labels=df[x],
-        colors=colors,
-        startangle=ct.get("startangle", 90),
-        autopct=ct.get("autopct", "%1.1f%%"),
-        pctdistance=ct.get("pctdistance", 0.82),
-        shadow=ct.get("shadow", False),
-        wedgeprops=dict(width=wedge_width),
-        textprops={"fontsize": 9},
-    )
-    ax.set_aspect("equal")
-
-
-def chart_area(ax: plt.Axes, df: pd.DataFrame, x: str, y: str | list[str],
-               config: dict, palette: list[str], **kwargs) -> None:
-    """Render an area chart (stacked or single)."""
-    ct = config.get("chart_types", {}).get("area", {})
-    y_cols = y if isinstance(y, list) else [y]
-
-    if kwargs.get("stacked") and len(y_cols) > 1:
-        ax.stackplot(
-            df[x],
-            *[df[c] for c in y_cols],
-            labels=y_cols,
-            colors=palette[:len(y_cols)],
-            alpha=ct.get("alpha", 0.4),
-        )
-    else:
-        for i, col in enumerate(y_cols):
-            ax.fill_between(
-                df[x], df[col],
-                alpha=ct.get("alpha", 0.4),
-                color=palette[i % len(palette)],
-                label=col,
-            )
-            ax.plot(
-                df[x], df[col],
-                color=palette[i % len(palette)],
-                linewidth=ct.get("linewidth", 1.5),
-            )
-    if len(y_cols) > 1:
-        smart_legend(ax)
-
-
-def chart_bubble(ax: plt.Axes, df: pd.DataFrame, x: str, y: str,
-                 config: dict, palette: list[str], **kwargs) -> None:
-    """Render a bubble chart — requires a size column."""
-    ct = config.get("chart_types", {}).get("bubble", {})
-    size_col = kwargs.get("size")
-    color_col = kwargs.get("color")
-
-    if size_col and size_col in df.columns:
-        s_range = ct.get("size_range", [20, 500])
-        s_vals = df[size_col].astype(float)
-        s_min, s_max = s_vals.min(), s_vals.max()
-        if s_max > s_min:
-            sizes = s_range[0] + (s_vals - s_min) / (s_max - s_min) * (s_range[1] - s_range[0])
+def value_labels(df, c: Ctx, xfield, yfield, horizontal=False, long=None):
+    cats = df[xfield].tolist()
+    """Value labels at bar ends; two layers so negatives sit below / left of the bar."""
+    fs = c.fonts.get("annotation", {}).get("size", 9)
+    src = long if long is not None else df
+    out = []
+    for neg in (False, True):
+        sub = src[src[yfield] < 0] if neg else src[src[yfield] >= 0]
+        if sub.empty:
+            continue
+        mk = alt.Chart(sub).mark_text(fontSize=fs + 1, fontWeight="bold", color=c.ink,
+                                      **({"align": "right" if neg else "left", "dx": -6 if neg else 6} if horizontal else {"baseline": "top" if neg else "bottom", "dy": 6 if neg else -4}))
+        if horizontal:
+            out.append(mk.encode(y=alt.Y(field=xfield, type="nominal", scale=alt.Scale(domain=cats)), x=alt.X(field=yfield, type="quantitative"), text=alt.Text(field=yfield, type="quantitative", format=",.4~g")))
         else:
-            sizes = (s_range[0] + s_range[1]) / 2
-    else:
-        sizes = 80
+            out.append(mk.encode(x=alt.X(field=xfield, type="nominal", scale=alt.Scale(domain=cats)), y=alt.Y(field=yfield, type="quantitative"), text=alt.Text(field=yfield, type="quantitative", format=",.4~g")))
+    return out
 
+
+def build_bar(df, c: Ctx):
+    ct = c.ct.get("bar", {})
+    xl, yl = labels(c)
+    n = len(df)
+    if n > 40:
+        print(f"Warning: {n} categories on one bar chart; use --top N, --max-categories N or --type hbar for a readable result.", file=sys.stderr)
+    if len(c.ys) > 1:
+        lf = long_form(df, c)
+        bars = alt.Chart(lf).mark_bar(cornerRadiusTopLeft=2, cornerRadiusTopRight=2).encode(
+            x=alt.X(field=c.x, type="nominal", sort=None, axis=x_axis(df[c.x].tolist(), xl)),
+            xOffset=alt.XOffset(field="series", type="nominal"), y=y_enc("value", yl, domain=padded_domain(lf["value"])), color=series_color(c.ys, c.palette, symbol="square"))
+        return alt.layer(bars)
+    bars = alt.Chart(df).mark_bar(color=c.palette[0], cornerRadiusTopLeft=2, cornerRadiusTopRight=2).encode(
+        x=alt.X(field=c.x, type="nominal", scale=alt.Scale(domain=df[c.x].tolist()), axis=x_axis(df[c.x].tolist(), xl)), y=y_enc(c.y, yl, domain=padded_domain(df[c.y])))
+    layers = [bars] + (value_labels(df, c, c.x, c.y) if n <= 20 else [])
+    return finish(layers, df, c, "bar")
+
+
+def build_hbar(df, c: Ctx):
+    xl, yl = labels(c)
+    n = len(df)
+    c.H = max(c.H, n * 26 + 50)
+    bars = alt.Chart(df).mark_bar(color=c.palette[0], cornerRadiusTopRight=3, cornerRadiusBottomRight=3, height={"band": 0.72}).encode(
+        y=alt.Y(field=c.x, type="nominal", scale=alt.Scale(domain=df[c.x].tolist()), title=None, axis=alt.Axis(ticks=False, domain=False, labelLimit=320, grid=False)),
+        x=alt.X(field=c.y, type="quantitative", title=yl, scale=alt.Scale(domain=padded_domain(df[c.y]), nice=False), axis=alt.Axis(grid=True, tickCount=6, title=yl)))
+    layers = [bars] + (value_labels(df, c, c.x, c.y, horizontal=True) if n <= 30 else [])
+    return finish(layers, df, c, "hbar")
+
+
+def group_scale(df, col, palette):
+    cats = list(pd.unique(df[col]))
+    return alt.Scale(domain=[str(v) for v in cats], range=[palette[i % len(palette)] for i in range(len(cats))])
+
+
+def build_scatter(df, c: Ctx, bubble: bool = False):
+    ct = c.ct.get("bubble" if bubble else "scatter", {})
+    xl, yl = labels(c)
+    n = len(df)
+    opacity = ct.get("alpha", 0.6 if bubble else 0.7)
+    if n > 500:
+        opacity = min(opacity, 0.4)
+    enc = dict(x=x_enc(df, c, xl), y=y_enc(c.y, yl, zero=False))
+    if bubble:
+        size_col = c.kw.get("size")
+        rng = ct.get("size_range", [20, 500])
+        enc["size"] = alt.Size(field=size_col, type="quantitative", scale=alt.Scale(range=rng), legend=alt.Legend(title=size_col, orient="right", direction="vertical", symbolType="circle", symbolFillColor="#cccccc")) if size_col else alt.value(90)
+    color_col = c.kw.get("color")
+    mark = dict(filled=True, opacity=opacity, stroke="#ffffff", strokeWidth=ct.get("edgewidth", 0.5))
+    if not bubble:
+        mark["size"] = ct.get("size", 40) * (0.6 if n > 500 else 0.8 if n > 200 else 1.0) * 1.3
     if color_col and color_col in df.columns:
-        groups = df[color_col].unique()
-        for i, group in enumerate(groups):
-            mask = df[color_col] == group
-            ax.scatter(
-                df.loc[mask, x], df.loc[mask, y],
-                s=sizes[mask] if hasattr(sizes, '__iter__') else sizes,
-                color=palette[i % len(palette)],
-                alpha=ct.get("alpha", 0.6),
-                edgecolors=ct.get("edgecolor", "#ffffff"),
-                linewidths=ct.get("edgewidth", 0.5),
-                label=str(group),
-            )
-        smart_legend(ax)
+        d2 = df.assign(**{color_col: df[color_col].astype(str)})
+        enc["color"] = alt.Color(field=color_col, type="nominal", scale=group_scale(d2, color_col, c.palette), legend=alt.Legend(title=None, symbolType="circle"))
+        base = alt.Chart(d2).mark_point(**mark).encode(**enc)
     else:
-        ax.scatter(
-            df[x], df[y],
-            s=sizes,
-            color=palette[0],
-            alpha=ct.get("alpha", 0.6),
-            edgecolors=ct.get("edgecolor", "#ffffff"),
-            linewidths=ct.get("edgewidth", 0.5),
-        )
+        base = alt.Chart(df).mark_point(color=c.palette[0], **mark).encode(**enc)
+    return finish([base], df, c, "scatter")
 
 
-def chart_timeseries(ax: plt.Axes, df: pd.DataFrame, x: str, y: str | list[str],
-                     config: dict, palette: list[str], **kwargs) -> None:
-    """Render a time-series line chart with date formatting."""
-    ct = config.get("chart_types", {}).get("timeseries", {})
-    y_cols = y if isinstance(y, list) else [y]
-
-    # Parse dates
-    dates = pd.to_datetime(df[x], errors="coerce")
-
-    for i, col in enumerate(y_cols):
-        ax.plot(
-            dates, df[col],
-            color=palette[i % len(palette)],
-            linewidth=ct.get("linewidth", 2.0),
-            marker=ct.get("marker"),
-            alpha=ct.get("alpha", 1.0),
-            label=col,
-        )
-
-    # Auto-format dates
-    ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.AutoDateLocator()))
-    plt.setp(ax.xaxis.get_majorticklabels(), rotation=30, ha="right")
-
-    if len(y_cols) > 1:
-        smart_legend(ax)
+def build_bubble(df, c: Ctx):
+    return build_scatter(df, c, bubble=True)
 
 
-def chart_small_multiples(fig: plt.Figure, df: pd.DataFrame, x: str, y: str,
-                          config: dict, palette: list[str], **kwargs) -> None:
-    """Render small multiples — faceted by a grouping column."""
-    ct = config.get("chart_types", {}).get("small_multiples", {})
-    group_col = kwargs.get("group") or kwargs.get("color")
-    if not group_col or group_col not in df.columns:
-        print("Error: small_multiples requires --group COL", file=sys.stderr)
-        sys.exit(1)
-
-    groups = df[group_col].unique()
-    max_cols = ct.get("max_cols", 4)
-    n_groups = len(groups)
-    n_cols = min(n_groups, max_cols)
-    n_rows = (n_groups + n_cols - 1) // n_cols
-    subplot_size = ct.get("subplot_size", [3, 2.5])
-
-    fig.set_size_inches(subplot_size[0] * n_cols, subplot_size[1] * n_rows)
-    fig.clear()
-
-    axes = fig.subplots(n_rows, n_cols, sharex=ct.get("share_x", True),
-                        sharey=ct.get("share_y", True), squeeze=False)
-
-    for i, group in enumerate(groups):
-        row, col = divmod(i, n_cols)
-        ax = axes[row][col]
-        subset = df[df[group_col] == group]
-        ax.plot(subset[x], subset[y], color=palette[i % len(palette)], linewidth=1.5)
-        ax.set_title(str(group), fontsize=10, fontfamily="Georgia")
-        apply_tufte_style(ax, config)
-
-    # Hide empty subplots
-    for i in range(n_groups, n_rows * n_cols):
-        row, col = divmod(i, n_cols)
-        axes[row][col].set_visible(False)
-
-    fig.tight_layout()
+def build_histogram(df, c: Ctx):
+    ct = c.ct.get("histogram", {})
+    col = c.ys[0] if c.ys and c.ys[0] else c.x
+    xl = c.kw.get("xlabel") if c.kw.get("xlabel") is not None else col
+    bins = c.kw.get("bins") or ct.get("bins", 30)
+    return alt.Chart(df[[col]].dropna()).mark_bar(color=c.palette[0], opacity=ct.get("alpha", 0.9), binSpacing=1).encode(
+        x=alt.X(field=col, type="quantitative", bin=alt.Bin(maxbins=bins), title=xl),
+        y=alt.Y("count()", title=c.kw.get("ylabel") or "Count"))
 
 
-# ---------------------------------------------------------------------------
-# Main orchestrator
-# ---------------------------------------------------------------------------
+def build_heatmap(df, c: Ctx):
+    ct = c.ct.get("heatmap", {})
+    if c.x and c.ys and c.ys[0]:
+        pv = df.pivot_table(index=c.ys[0], columns=c.x, aggfunc="mean", sort=False)
+        if pv.columns.nlevels > 1:
+            pv.columns = pv.columns.droplevel(0)
+        corr = False
+        xt_name, yt_name = c.x, c.ys[0]
+    else:
+        num = df.select_dtypes(include=[np.number])
+        pv = num.corr() if num.shape[1] > 1 else num
+        corr = True
+        xt_name, yt_name = "column", "row"
+    long = pv.reset_index().melt(id_vars=pv.index.name or "index", var_name=xt_name if not corr else "column", value_name="value")
+    row_name = pv.index.name or "index"
+    if corr:
+        long = long.rename(columns={row_name: "row"})
+        row_name = "row"
+    cols_order = [str(v) for v in pv.columns]
+    rows_order = [str(v) for v in pv.index]
+    long[row_name] = long[row_name].astype(str)
+    long[xt_name if not corr else "column"] = long[xt_name if not corr else "column"].astype(str)
+    xf = xt_name if not corr else "column"
+    colors = ct.get("corr_colors", ["#2166AC", "#F7F7F7", "#B2182B"]) if corr else ct.get("colors", ["#FFFFCC", "#FD8D3C", "#800026"])
+    scale = alt.Scale(range=colors, domain=[-1, 0, 1]) if corr else alt.Scale(range=colors)
+    if not corr:
+        lo, hi = float(long["value"].min()), float(long["value"].max())
+        scale = alt.Scale(range=colors, domain=list(np.linspace(lo, hi, len(colors))))
+    fmt = ".2f" if corr else ct.get("fmt", ".1f")
+    cell_w = max(40, min(110, int(c.W / max(len(cols_order), 1))))
+    rect = alt.Chart(long).mark_rect(stroke="#ffffff", strokeWidth=ct.get("linewidths", 0.5) * 2).encode(
+        x=alt.X(field=xf, type="nominal", sort=cols_order, title=None if corr else c.kw.get("xlabel") or c.x, axis=alt.Axis(labelAngle=0, ticks=False, domain=False, grid=False)),
+        y=alt.Y(field=row_name, type="nominal", sort=rows_order, title=None if corr else c.kw.get("ylabel") or row_name, axis=alt.Axis(ticks=False, domain=False, grid=False)),
+        color=alt.Color("value:Q", scale=scale, legend=alt.Legend(title=None, orient="right", direction="vertical", gradientLength=140)))
+    mid = (long["value"].min() + long["value"].max()) / 2 if not corr else 0.5
+    text = alt.Chart(long).mark_text(fontSize=c.fonts.get("tick_label", {}).get("size", 9) + 1).encode(
+        x=alt.X(field=xf, type="nominal", sort=cols_order), y=alt.Y(field=row_name, type="nominal", sort=rows_order),
+        text=alt.Text("value:Q", format=fmt),
+        color=alt.condition((alt.datum.value > mid) if not corr else (abs(alt.datum.value) > 0.6), alt.value("#ffffff"), alt.value(c.ink)))
+    return alt.layer(rect, text)
 
-CHART_RENDERERS = {
-    "line": chart_line,
-    "bar": chart_bar,
-    "hbar": chart_hbar,
-    "scatter": chart_scatter,
-    "histogram": chart_histogram,
-    "heatmap": chart_heatmap,
-    "box": chart_box,
-    "pie": chart_pie,
-    "donut": chart_donut,
-    "area": chart_area,
-    "bubble": chart_bubble,
-    "timeseries": chart_timeseries,
+
+def build_box(df, c: Ctx):
+    ct = c.ct.get("box", {})
+    xl, yl = labels(c)
+    if len(c.ys) == 1 and c.x and c.x in df.columns:
+        d2 = df[[c.x, c.y]].dropna().copy()
+        d2[c.x] = d2[c.x].astype(str)
+        order = [str(v) for v in c.kw["order"]] if c.kw.get("order") else sorted(d2[c.x].unique(), key=lambda v: (not v.replace(".", "", 1).isdigit(), float(v) if v.replace(".", "", 1).isdigit() else 0, v))
+        enc = dict(x=alt.X(field=c.x, type="nominal", sort=order, title=xl, axis=alt.Axis(labelAngle=0, ticks=False, grid=False)), y=y_enc(c.y, yl, zero=False))
+        color = alt.Color(field=c.x, type="nominal", scale=alt.Scale(domain=order, range=[c.palette[i % len(c.palette)] for i in range(len(order))]), legend=None)
+        data = d2
+    else:
+        data = df[c.ys].melt(var_name="series", value_name="value").dropna()
+        enc = dict(x=alt.X("series:N", sort=c.ys, title=None, axis=alt.Axis(labelAngle=0, ticks=False)), y=y_enc("value", yl, zero=False))
+        color = alt.Color("series:N", scale=alt.Scale(domain=c.ys, range=c.palette[:len(c.ys)]), legend=None)
+    return alt.Chart(data).mark_boxplot(extent=1.5, size=ct.get("width", 0.6) * 110, opacity=0.85, median={"color": c.ink, "strokeWidth": 2},
+                                        rule={"color": c.ink}, ticks={"size": 16, "color": c.ink}, outliers={"size": 25, "color": c.ink}).encode(color=color, **enc)
+
+
+def build_pie(df, c: Ctx, donut: bool = False):
+    ct = c.ct.get("donut" if donut else "pie", {})
+    d = group_small_slices(df[[c.x, c.y]].dropna(), c.x, c.y, c.kw.get("max_categories") or 10)
+    d[c.x] = d[c.x].astype(str)
+    d["pct"] = d[c.y] / d[c.y].sum()
+    d["label"] = d["pct"].map(lambda v: f"{v:.1%}")
+    order = d[c.x].tolist()
+    R = int(min(c.W, c.H) / 2) - 8
+    d["big"] = d["pct"] >= (0.04 if R >= 150 else 0.08)  # label only slices that can hold the text
+    r_in = int(R * (1 - ct.get("wedgeprops_width", 0.4) / 0.5 * 0.5)) if donut else 0
+    enc_theta = alt.Theta(field=c.y, type="quantitative", stack=True)
+    color = alt.Color(field=c.x, type="nominal", sort=order, scale=alt.Scale(domain=order, range=[c.palette[i % len(c.palette)] for i in range(len(order))]),
+                      legend=alt.Legend(title=None, orient="right", direction="vertical", symbolType="square"))
+    arcs = alt.Chart(d).mark_arc(outerRadius=R, innerRadius=r_in, stroke="#ffffff", strokeWidth=1.5).encode(theta=enc_theta, color=color, order=alt.Order(f"{c.y}:Q", sort="descending"))
+    text = alt.Chart(d[d["big"]]).mark_text(radius=(R + r_in) / 2 if donut else R * 0.7, fontSize=c.fonts.get("annotation", {}).get("size", 9) + 2, fontWeight="bold", color="#ffffff").encode(
+        theta=enc_theta, text="label:N", order=alt.Order(f"{c.y}:Q", sort="descending"))
+    return alt.layer(arcs, text).properties(width=2 * R, height=2 * R)
+
+
+def build_donut(df, c: Ctx):
+    return build_pie(df, c, donut=True)
+
+
+def build_area(df, c: Ctx):
+    ct = c.ct.get("area", {})
+    as_dates(df, c.x) if ftype(df, c.x) == "N" else None
+    xl, yl = labels(c)
+    xe = x_enc(df, c, xl)
+    stacked = c.kw.get("stacked") and len(c.ys) > 1
+    if len(c.ys) == 1:
+        base = alt.Chart(df).mark_area(color=c.palette[0], opacity=0.35, line={"color": c.palette[0], "strokeWidth": ct.get("linewidth", 1.5) + 0.5}).encode(x=xe, y=y_enc(c.y, yl))
+        return finish([base], df, c, "area")
+    lf = long_form(df, c)
+    area = alt.Chart(lf).mark_area(opacity=0.9 if stacked else 0.4, line=not stacked).encode(
+        x=xe, y=alt.Y("value:Q", stack="zero" if stacked else None, title=yl, scale=alt.Scale(zero=True)), color=series_color(c.ys, c.palette, symbol="square"),
+        order=alt.Order("series:N", sort="ascending") if stacked else alt.value(0))
+    return area
+
+
+def build_small_multiples(df, c: Ctx, nominal_cols: list = None):
+    ct = c.ct.get("small_multiples", {})
+    g = c.kw.get("group") or c.kw.get("color")
+    if not g or g not in df.columns:
+        fail("small_multiples requires --group COL", 2)
+    as_dates(df, c.x)
+    d = df[[c.x, g, c.y]].dropna()
+    d = d.groupby([g, c.x], as_index=False, sort=False)[c.y].mean() if d.duplicated([g, c.x]).any() else d
+    d[g] = d[g].astype(str)
+    n = d[g].nunique()
+    cols = min(n, ct.get("max_cols", 4))
+    sw, sh = ct.get("subplot_size", [3, 2.5])
+    sw, sh = int(sw * PX * 0.8), int(sh * PX * 0.7)
+    t = ftype(d, c.x)
+    axis = num_axis(d[c.x], grid=False, labelAngle=0, title=None) if t == "Q" else alt.Axis(grid=False, labelAngle=0, title=None, tickCount=4)
+    xe = alt.X(field=c.x, type={"T": "temporal", "Q": "quantitative", "N": "ordinal"}[t], title=None, axis=axis)
+    line = alt.Chart(d).mark_line(color=c.palette[0], strokeWidth=2).encode(x=xe, y=y_enc(c.y, None, zero=False))
+    fonts = c.fonts.get("title", {})
+    return line.properties(width=sw, height=sh).facet(
+        facet=alt.Facet(field=g, type="nominal", sort=list(pd.unique(d[g])), title=None, header=alt.Header(labelFont=fonts.get("family", "Georgia"), labelFontSize=11, labelFontWeight="bold", labelAnchor="start", labelColor=c.ink)),
+        columns=cols)
+
+
+BUILDERS = {
+    "line": build_line, "bar": build_bar, "hbar": build_hbar, "scatter": build_scatter, "histogram": build_histogram,
+    "heatmap": build_heatmap, "box": build_box, "pie": build_pie, "donut": build_donut, "area": build_area,
+    "bubble": build_bubble, "timeseries": build_timeseries, "small_multiples": build_small_multiples,
 }
 
 
-def generate(data_path: Path, output_path: Path, chart_type: str,
-             x_col: str, y_col: str | None, config: dict, **kwargs) -> None:
-    """Generate a chart from data file to output image."""
-    # Load data
-    ext = data_path.suffix.lower()
-    if ext == ".json":
-        df = pd.read_json(data_path)
-    elif ext in (".xlsx", ".xls"):
-        df = pd.read_excel(data_path, engine="openpyxl")
-    else:
-        df = pd.read_csv(data_path)
+# ---------------------------------------------------------------------------
+# Orchestrator
+# ---------------------------------------------------------------------------
 
+def generate(data_path: Path, output_path: Path, chart_type: str, x_col: str, y_col: str | None, config: dict, **kw) -> None:
+    df = load_df(data_path)
     original_rows = len(df)
+    df.columns = [safe_name(str(c)) for c in df.columns]
+    x_col = safe_name(x_col)
+    for k in ("color", "size", "group", "groupby", "sort_by"):
+        kw[k] = safe_name(kw.get(k))
+    if chart_type in NEEDS_Y and not y_col:
+        fail(f"--y is required for --type {chart_type}", 2)
+    ys = [safe_name(s.strip()) for s in y_col.split(",")] if y_col else []
 
-    # Multi-column y support (comma-separated)
-    y_cols = y_col
-    if y_col and "," in y_col:
-        y_cols = [c.strip() for c in y_col.split(",")]
+    for name in [x_col] + ys + [kw.get(k) for k in ("color", "size", "group")]:
+        if name and name not in df.columns and not (kw.get("groupby") and kw["groupby"] in df.columns):
+            fail(f"Column '{name}' not found. Available: {list(df.columns)}")
 
-    # Validate columns exist (before reduction, since groupby may rename)
-    all_cols = [x_col] if x_col else []
-    if isinstance(y_cols, list):
-        all_cols.extend(y_cols)
-    elif y_cols:
-        all_cols.append(y_cols)
-    for col_name in kwargs.get("extra_cols", []):
-        if col_name:
-            all_cols.append(col_name)
-
-    # Only validate columns that aren't the groupby target (which may create x_col)
-    groupby_col = kwargs.get("groupby")
-    for c in all_cols:
-        if c and c not in df.columns:
-            # If using groupby that will produce this column, skip validation
-            if groupby_col and groupby_col in df.columns:
-                continue
-            print(f"Error: Column '{c}' not found. Available: {list(df.columns)}", file=sys.stderr)
-            sys.exit(1)
-
-    # ----- Data reduction pipeline -----
-    has_reduction = any(kwargs.get(k) for k in ("agg", "groupby", "top", "bottom", "max_categories"))
-    if has_reduction:
-        df = reduce_data(df, y_cols or y_col, x_col=x_col, **kwargs)
+    if any(kw.get(k) for k in ("agg", "groupby", "top", "bottom", "max_categories", "sort_by")):
+        df = reduce_data(df, ys or y_col, x_col=x_col, **{k: v for k, v in kw.items() if k != "x_col"})
         if len(df) < original_rows:
             print(f"Data reduced: {original_rows} → {len(df)} rows", file=sys.stderr)
+    order = [s.strip() for s in kw["order"].split(",")] if kw.get("order") else None
+    if order and x_col in df.columns:
+        df = apply_order(df, x_col, order)
+    kw["order"] = order
 
-    # ----- Auto-adjust figure size -----
     chart_cfg = config.get("chart", {})
-    base_figsize = kwargs.get("figsize") or chart_cfg.get("figsize", [10, 6])
-    dpi = kwargs.get("dpi") or chart_cfg.get("dpi", 150)
+    fw, fh = kw.get("figsize") or chart_cfg.get("figsize", [10, 6])
+    dpi = kw.get("dpi") or chart_cfg.get("dpi", 150)
+    W, H = int(fw * PX) - 40, int(fh * PX) - (96 if (kw.get("title") or kw.get("subtitle")) else 40)
+    n = len(df)
+    if not kw.get("figsize") and chart_type in ("bar", "line", "area", "timeseries") and n > 15:
+        W = max(W, int(n * 26))
+    palette = get_palette(config, kw.get("palette"))
+    c = Ctx(x=x_col, ys=ys, config=config, palette=palette, W=W, H=H, kw=kw)
 
-    # Only auto-scale if user didn't explicitly set figsize
-    if not kwargs.get("figsize"):
-        n_cats = len(df)
-        figsize = auto_figsize(n_cats, chart_type, base_figsize)
-    else:
-        figsize = tuple(base_figsize)
+    chart = BUILDERS[chart_type](df, c)
+    props = {}
+    if chart_type not in ("pie", "donut", "small_multiples"):
+        props.update(width=c.W, height=c.H)
+    if kw.get("title") or kw.get("subtitle"):
+        props["title"] = alt.TitleParams(text=kw.get("title") or "", subtitle=[kw["subtitle"]] if kw.get("subtitle") else [])
+    chart = chart.properties(**props).configure(**vl_config(config, palette))
 
-    if chart_type == "small_multiples":
-        fig = plt.figure(figsize=figsize, dpi=dpi, facecolor=chart_cfg.get("background", "#ffffff"))
-        chart_small_multiples(fig, df, x_col, y_cols or y_col, config, get_palette(config, kwargs.get("palette")), **kwargs)
-    else:
-        fig, ax = plt.subplots(figsize=figsize, dpi=dpi, facecolor=chart_cfg.get("background", "#ffffff"))
-        ax.set_facecolor(chart_cfg.get("background", "#ffffff"))
-
-        palette = get_palette(config, kwargs.get("palette"))
-        # Remove non-renderer kwargs to avoid unexpected keyword args
-        exclude_keys = {"palette", "figsize", "dpi", "extra_cols", "title", "subtitle",
-                        "xlabel", "ylabel", "trend", "degree", "highlights",
-                        "top", "bottom", "agg", "groupby", "sort_by", "sort_order",
-                        "max_categories", "x_col"}
-        render_kwargs = {k: v for k, v in kwargs.items() if k not in exclude_keys}
-        renderer = CHART_RENDERERS.get(chart_type)
-        if not renderer:
-            print(f"Error: Unknown chart type '{chart_type}'", file=sys.stderr)
-            print(f"Available: {', '.join(sorted(CHART_RENDERERS.keys()))}", file=sys.stderr)
-            sys.exit(1)
-
-        renderer(ax, df, x_col, y_cols or y_col, config, palette, **render_kwargs)
-
-        # Styling
-        apply_tufte_style(ax, config)
-        set_title_and_labels(
-            ax, config,
-            title=kwargs.get("title"),
-            subtitle=kwargs.get("subtitle"),
-            xlabel=kwargs.get("xlabel", x_col),
-            ylabel=kwargs.get("ylabel", y_cols if isinstance(y_cols, str) else (y_cols[0] if y_cols else None)),
-        )
-
-        # Trend line
-        if kwargs.get("trend"):
-            try:
-                x_num = pd.to_numeric(df[x_col], errors="coerce").values
-                y_num = pd.to_numeric(df[y_cols] if isinstance(y_cols, str) else df[y_cols[0]], errors="coerce").values
-                add_trend_line(ax, x_num, y_num, config,
-                               method=kwargs["trend"],
-                               degree=kwargs.get("degree", 2))
-            except Exception as e:
-                print(f"Warning: Could not add trend line: {e}", file=sys.stderr)
-
-        # Highlights
-        highlights_path = kwargs.get("highlights")
-        if highlights_path:
-            with open(highlights_path, "r", encoding="utf-8") as f:
-                highlights = json.load(f)
-            y_for_hl = y_cols if isinstance(y_cols, str) else y_cols[0]
-            apply_highlights(ax, df, highlights, config, x_col, y_for_hl)
-
-    plt.tight_layout()
-
-    # Save
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fmt = output_path.suffix.lstrip(".").lower()
-    if fmt == "svg":
-        fig.savefig(output_path, format="svg", bbox_inches="tight", facecolor=fig.get_facecolor())
-    elif fmt == "pdf":
-        fig.savefig(output_path, format="pdf", bbox_inches="tight", facecolor=fig.get_facecolor())
+    if fmt in ("png", ""):
+        chart.save(str(output_path), format="png", scale_factor=dpi / PX)
+    elif fmt in ("svg", "pdf", "html", "json"):
+        chart.save(str(output_path), format=fmt)
     else:
-        fig.savefig(output_path, format="png", bbox_inches="tight", dpi=dpi, facecolor=fig.get_facecolor())
-
-    plt.close(fig)
+        fail(f"Unsupported output format '.{fmt}' (use png, svg, pdf, html or json)", 2)
     print(f"Chart saved to {output_path} ({chart_type}, {len(df)} data points)")
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Generate publication-quality charts from structured data."
-    )
-    parser.add_argument("data", type=Path, help="Input data file (CSV, JSON, Excel)")
-    parser.add_argument("output", type=Path, help="Output image file (PNG, SVG, PDF)")
-    parser.add_argument("--type", required=True, dest="chart_type",
-                        choices=list(CHART_RENDERERS.keys()) + ["small_multiples"],
-                        help="Chart type")
-    parser.add_argument("--x", required=True, dest="x_col", help="X-axis column name")
-    parser.add_argument("--y", dest="y_col", help="Y-axis column name (comma-separated for multi-series)")
-    parser.add_argument("--title", help="Chart title")
-    parser.add_argument("--subtitle", help="Chart subtitle")
-    parser.add_argument("--xlabel", help="X-axis label (default: column name)")
-    parser.add_argument("--ylabel", help="Y-axis label (default: column name)")
-    parser.add_argument("--palette", choices=["colorblind", "sequential", "diverging", "categorical", "monochrome"],
-                        help="Color palette name")
-    parser.add_argument("--color", help="Column for color grouping (scatter, bubble)")
-    parser.add_argument("--size", help="Column for size encoding (bubble)")
-    parser.add_argument("--group", help="Column for faceting (small_multiples)")
-    parser.add_argument("--trend", choices=["linear", "polynomial"], help="Add trend line")
-    parser.add_argument("--degree", type=int, default=2, help="Polynomial degree for trend line")
-    parser.add_argument("--highlights", type=Path, help="Path to highlights JSON file")
-    parser.add_argument("--stacked", action="store_true", help="Use stacked area chart")
-    parser.add_argument("--bins", type=int, help="Number of bins for histogram")
-    parser.add_argument("--figsize", nargs=2, type=float, metavar=("W", "H"), help="Figure size in inches")
-    parser.add_argument("--dpi", type=int, help="Output resolution")
-    parser.add_argument("--config", type=Path, help="Path to custom config JSON")
+    p = argparse.ArgumentParser(description="Generate publication-quality charts from structured data.")
+    p.add_argument("data", type=Path, help="Input data file (CSV, JSON, Excel)")
+    p.add_argument("output", type=Path, help="Output file (.png .svg .pdf .html .json)")
+    p.add_argument("--type", required=True, dest="chart_type", choices=list(BUILDERS), help="Chart type")
+    p.add_argument("--x", required=True, dest="x_col", help="X-axis column name")
+    p.add_argument("--y", dest="y_col", help="Y-axis column(s), comma-separated for multi-series")
+    p.add_argument("--title"), p.add_argument("--subtitle")
+    p.add_argument("--xlabel"), p.add_argument("--ylabel")
+    p.add_argument("--palette", help="Palette name from the config (colorblind, categorical, monochrome, editorial, ...)")
+    p.add_argument("--theme", help="Look: tufte (default) or editorial (matches pptx-enhanced decks)")
+    p.add_argument("--preset", help="Size preset: report (default) or slide (16:9-friendly, larger text)")
+    p.add_argument("--color", help="Column for color grouping (scatter, bubble)")
+    p.add_argument("--size", help="Column for size encoding (bubble)")
+    p.add_argument("--group", help="Column for faceting (small_multiples)")
+    p.add_argument("--order", help="Comma-separated category order for the x column (bar, line, box, heatmap)")
+    p.add_argument("--trend", choices=["linear", "polynomial"], help="Add trend line with R²")
+    p.add_argument("--degree", type=int, default=2, help="Polynomial degree for the trend line")
+    p.add_argument("--highlights", type=Path, help="Highlights JSON from detect_highlights.py")
+    p.add_argument("--stacked", action="store_true", help="Stacked area")
+    p.add_argument("--bins", type=int, help="Histogram bins")
+    p.add_argument("--figsize", nargs=2, type=float, metavar=("W", "H"), help="Figure size in inches")
+    p.add_argument("--dpi", type=int, help="PNG resolution")
+    p.add_argument("--config", type=Path, help="Custom config JSON merged over the defaults")
+    g = p.add_argument_group("data reduction", "Filter, aggregate and limit data before plotting")
+    g.add_argument("--top", type=int, metavar="N", help="Keep the top N rows by y")
+    g.add_argument("--bottom", type=int, metavar="N", help="Keep the bottom N rows by y")
+    g.add_argument("--agg", choices=["mean", "sum", "median", "count", "min", "max"], help="Aggregation (with --groupby)")
+    g.add_argument("--groupby", metavar="COL", help="Group by this column before aggregating")
+    g.add_argument("--sort-by", dest="sort_by", metavar="COL", help="Sort column (default: y)")
+    g.add_argument("--sort-order", dest="sort_order", choices=["asc", "desc"], default="desc")
+    g.add_argument("--max-categories", dest="max_categories", type=int, metavar="N", help="Keep N categories, group the rest as 'Other'")
+    a = p.parse_args()
 
-    # Data reduction arguments
-    data_group = parser.add_argument_group("data reduction",
-                                           "Filter, aggregate, and limit data before plotting")
-    data_group.add_argument("--top", type=int, metavar="N",
-                            help="Show only the top N rows by y-value (descending)")
-    data_group.add_argument("--bottom", type=int, metavar="N",
-                            help="Show only the bottom N rows by y-value (ascending)")
-    data_group.add_argument("--agg", choices=["mean", "sum", "median", "count", "min", "max"],
-                            help="Aggregation function (use with --groupby)")
-    data_group.add_argument("--groupby", metavar="COL",
-                            help="Column to group by before aggregation")
-    data_group.add_argument("--sort-by", dest="sort_by", metavar="COL",
-                            help="Column to sort by (default: y-column)")
-    data_group.add_argument("--sort-order", dest="sort_order", choices=["asc", "desc"],
-                            default="desc", help="Sort direction (default: desc)")
-    data_group.add_argument("--max-categories", dest="max_categories", type=int, metavar="N",
-                            help="Max categories to show; remainder grouped as 'Other'")
-
-    args = parser.parse_args()
-    config = load_config(args.config)
-
-    extra_cols = [args.color, args.size, args.group]
-
-    generate(
-        data_path=args.data,
-        output_path=args.output,
-        chart_type=args.chart_type,
-        x_col=args.x_col,
-        y_col=args.y_col,
-        config=config,
-        title=args.title,
-        subtitle=args.subtitle,
-        xlabel=args.xlabel,
-        ylabel=args.ylabel,
-        palette=args.palette,
-        color=args.color,
-        size=args.size,
-        group=args.group,
-        trend=args.trend,
-        degree=args.degree,
-        highlights=args.highlights,
-        stacked=args.stacked,
-        bins=args.bins,
-        figsize=args.figsize,
-        dpi=args.dpi,
-        extra_cols=extra_cols,
-        top=args.top,
-        bottom=args.bottom,
-        agg=args.agg,
-        groupby=args.groupby,
-        sort_by=args.sort_by,
-        sort_order=args.sort_order,
-        max_categories=args.max_categories,
-    )
+    config = load_config(a.config, a.theme, a.preset)
+    generate(a.data, a.output, a.chart_type, a.x_col, a.y_col, config,
+             title=a.title, subtitle=a.subtitle, xlabel=a.xlabel, ylabel=a.ylabel, palette=a.palette, color=a.color, size=a.size,
+             group=a.group, order=a.order, trend=a.trend, degree=a.degree, highlights=a.highlights, stacked=a.stacked, bins=a.bins,
+             figsize=a.figsize, dpi=a.dpi, top=a.top, bottom=a.bottom, agg=a.agg, groupby=a.groupby, sort_by=a.sort_by,
+             sort_order=a.sort_order, max_categories=a.max_categories)
 
 
 if __name__ == "__main__":

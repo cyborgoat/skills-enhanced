@@ -1,0 +1,22 @@
+[
+  {
+    "index": 8,
+    "value": 60.0,
+    "reason": "Outlier (below trend)",
+    "method": "zscore",
+    "z_score": -12.22,
+    "severity": "high",
+    "label": "z=-12.2",
+    "suggested_style": "halo_ring"
+  },
+  {
+    "index": 17,
+    "value": 260.0,
+    "reason": "Outlier (above trend)",
+    "method": "zscore",
+    "z_score": 18.66,
+    "severity": "high",
+    "label": "z=18.7",
+    "suggested_style": "halo_ring"
+  }
+]

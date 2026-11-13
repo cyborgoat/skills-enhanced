@@ -1,32 +1,113 @@
 {
   "theme": {
     "name": "Tufte Clean",
-    "description": "Publication-quality, minimal-ink visualization theme inspired by Edward Tufte"
+    "description": "Publication-quality, minimal-ink theme inspired by Edward Tufte. Alternative: --theme editorial (matches pptx-enhanced decks)."
   },
   "palettes": {
     "colorblind": {
-      "description": "Wong (2011) colorblind-safe palette — default for all charts",
-      "colors": ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"]
+      "description": "Wong (2011) colorblind-safe palette \u2014 default for all charts",
+      "colors": [
+        "#E69F00",
+        "#56B4E9",
+        "#009E73",
+        "#F0E442",
+        "#0072B2",
+        "#D55E00",
+        "#CC79A7",
+        "#000000"
+      ]
     },
     "sequential": {
       "description": "Single-hue sequential palette for ordered data",
-      "colors": ["#f7fbff", "#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#4292c6", "#2171b5", "#084594"]
+      "colors": [
+        "#f7fbff",
+        "#deebf7",
+        "#c6dbef",
+        "#9ecae1",
+        "#6baed6",
+        "#4292c6",
+        "#2171b5",
+        "#084594"
+      ]
     },
     "diverging": {
       "description": "Two-hue diverging palette for data with a meaningful midpoint",
-      "colors": ["#b2182b", "#d6604d", "#f4a582", "#fddbc7", "#d1e5f0", "#92c5de", "#4393c3", "#2166ac"]
+      "colors": [
+        "#b2182b",
+        "#d6604d",
+        "#f4a582",
+        "#fddbc7",
+        "#d1e5f0",
+        "#92c5de",
+        "#4393c3",
+        "#2166ac"
+      ]
     },
     "categorical": {
       "description": "High-contrast categorical palette for nominal data",
-      "colors": ["#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f", "#edc948", "#b07aa1", "#ff9da7"]
+      "colors": [
+        "#4e79a7",
+        "#f28e2b",
+        "#e15759",
+        "#76b7b2",
+        "#59a14f",
+        "#edc948",
+        "#b07aa1",
+        "#ff9da7"
+      ]
     },
     "monochrome": {
       "description": "Grayscale palette for print-friendly output",
-      "colors": ["#1a1a1a", "#4d4d4d", "#737373", "#999999", "#b3b3b3", "#cccccc", "#e0e0e0", "#f0f0f0"]
+      "colors": [
+        "#1a1a1a",
+        "#4d4d4d",
+        "#737373",
+        "#999999",
+        "#b3b3b3",
+        "#cccccc",
+        "#e0e0e0",
+        "#f0f0f0"
+      ]
+    },
+    "editorial": {
+      "description": "Editorial Light: red, slate blue, gold, greys (matches pptx-enhanced)",
+      "colors": [
+        "#C62828",
+        "#4E6E8E",
+        "#FFB300",
+        "#9AA5B1",
+        "#8E0000",
+        "#5B6474",
+        "#E57373",
+        "#1F2937"
+      ]
+    },
+    "editorial_sequential": {
+      "description": "Light to dark red",
+      "colors": [
+        "#FFF1F1",
+        "#F2B8B8",
+        "#E57373",
+        "#C62828",
+        "#8E0000"
+      ]
+    },
+    "editorial_diverging": {
+      "description": "Slate blue to white to red",
+      "colors": [
+        "#4E6E8E",
+        "#A9B9CA",
+        "#FFFFFF",
+        "#E8A0A0",
+        "#C62828"
+      ]
     }
   },
   "chart": {
-    "figsize": [10, 6],
+    "figsize": [
+      10,
+      6
+    ],
     "dpi": 150,
     "background": "#ffffff",
     "grid": {
@@ -122,11 +203,21 @@
       "alpha": 0.8
     },
     "heatmap": {
-      "cmap": "YlOrRd",
+      "colors": [
+        "#FFFFCC",
+        "#FED976",
+        "#FD8D3C",
+        "#E31A1C",
+        "#800026"
+      ],
+      "corr_colors": [
+        "#2166AC",
+        "#F7F7F7",
+        "#B2182B"
+      ],
       "annot": true,
       "fmt": ".1f",
-      "linewidths": 0.5,
-      "linecolor": "#ffffff"
+      "linewidths": 0.5
     },
     "box": {
       "width": 0.6,
@@ -154,7 +245,10 @@
       "alpha": 0.6,
       "edgecolor": "#ffffff",
       "edgewidth": 0.5,
-      "size_range": [20, 500]
+      "size_range": [
+        20,
+        500
+      ]
     },
     "timeseries": {
       "linewidth": 2.0,
@@ -166,7 +260,10 @@
       "max_cols": 4,
       "share_y": true,
       "share_x": true,
-      "subplot_size": [3, 2.5]
+      "subplot_size": [
+        3,
+        2.5
+      ]
     }
   },
   "highlights": {
@@ -195,9 +292,12 @@
     "annotation_arrow": {
       "description": "Arrow with text label pointing to datapoint",
       "arrowstyle": "->",
-      "color": "#333333",
-      "fontsize": 9,
-      "offset": [30, 30],
+      "color": "#1F2937",
+      "fontsize": 10,
+      "offset": [
+        30,
+        30
+      ],
       "connectionstyle": "arc3,rad=0.2"
     },
     "band_shade": {
@@ -213,7 +313,11 @@
     },
     "combo": {
       "description": "Combine multiple highlight styles",
-      "styles": ["color_shift", "size_boost", "annotation_arrow"]
+      "styles": [
+        "color_shift",
+        "size_boost",
+        "annotation_arrow"
+      ]
     }
   },
   "statistics": {
@@ -231,6 +335,126 @@
       "fontsize": 9,
       "color": "#666666",
       "position": "upper_right"
+    }
+  },
+  "default_palette": "colorblind",
+  "themes": {
+    "tufte": {},
+    "editorial": {
+      "default_palette": "editorial",
+      "chart": {
+        "fonts": {
+          "title": {
+            "family": "Arial",
+            "color": "#C62828",
+            "size": 18
+          },
+          "subtitle": {
+            "family": "Arial",
+            "color": "#5B6474",
+            "size": 12
+          },
+          "axis_label": {
+            "color": "#5B6474"
+          },
+          "tick_label": {
+            "color": "#5B6474"
+          },
+          "legend": {
+            "color": "#5B6474"
+          },
+          "annotation": {
+            "color": "#1F2937"
+          }
+        },
+        "grid": {
+          "color": "#D7DEE8",
+          "alpha": 0.8
+        },
+        "spines": {
+          "color": "#5B6474"
+        }
+      },
+      "chart_types": {
+        "heatmap": {
+          "colors": [
+            "#FFF1F1",
+            "#F2B8B8",
+            "#E57373",
+            "#C62828",
+            "#8E0000"
+          ],
+          "corr_colors": [
+            "#4E6E8E",
+            "#FFFFFF",
+            "#C62828"
+          ]
+        }
+      },
+      "highlights": {
+        "halo_ring": {
+          "color": "#FFB300"
+        },
+        "color_shift": {
+          "color": "#FFB300"
+        },
+        "size_boost": {
+          "color": "#FFB300"
+        },
+        "glow": {
+          "color": "#FFB300"
+        },
+        "band_shade": {
+          "color": "#FFB300",
+          "alpha": 0.25
+        },
+        "marker_change": {
+          "color": "#FFB300"
+        },
+        "annotation_arrow": {
+          "color": "#1F2937"
+        }
+      },
+      "statistics": {
+        "trend_line": {
+          "color": "#1F2937"
+        },
+        "annotation": {
+          "color": "#5B6474"
+        }
+      }
+    }
+  },
+  "presets": {
+    "report": {},
+    "slide": {
+      "chart": {
+        "figsize": [
+          9.5,
+          4.4
+        ],
+        "dpi": 200,
+        "fonts": {
+          "title": {
+            "size": 18
+          },
+          "subtitle": {
+            "size": 13
+          },
+          "axis_label": {
+            "size": 12
+          },
+          "tick_label": {
+            "size": 11
+          },
+          "annotation": {
+            "size": 11
+          },
+          "legend": {
+            "size": 11
+          }
+        }
+      }
     }
   }
 }
