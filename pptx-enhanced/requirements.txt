@@ -1,3 +1,2 @@
 python-pptx>=0.6.21
 Pillow>=10.0.0
-manim>=0.18.0

@@ -78,62 +78,33 @@
     }
   },
   "slideLayouts": {
-    "title": {
-      "name": "Title Slide",
-      "description": "Hero opening slide on a white canvas with red title typography, subtle neutral supporting cards, and optional visual evidence on the right."
-    },
-    "twoColumnSplit": {
-      "name": "Two Column Split",
-      "description": "Side-by-side sections with labeled headers. Each column has an uppercase label, descriptive content, key-value pairs, and a status line. Use for comparing two systems, domains, or perspectives."
-    },
-    "timeline": {
-      "name": "Timeline / Evolution",
-      "description": "Horizontal timeline showing progression across eras or phases. Each phase has a date label, icon area, title, and description. Use for showing technology evolution, roadmaps, or historical progression."
-    },
-    "comparison": {
-      "name": "Old vs New Comparison",
-      "description": "Two-column before/after comparison with contrasting headers. Left shows the old approach, right shows the new approach. Includes visual diagram areas and bullet points."
-    },
-    "funnel": {
-      "name": "Funnel / Lifecycle",
-      "description": "Vertical funnel or staged process showing transformation through numbered stages. Each stage has a title and description. Ends with a key takeaway callout."
-    },
-    "centralHub": {
-      "name": "Central Hub Diagram",
-      "description": "Central element with radiating connected components. Center has a main label, with 3-4 surrounding satellite elements connected by lines. Use for architecture diagrams, system components, or relationship maps."
-    },
-    "quadrant": {
-      "name": "Quadrant / Matrix Chart",
-      "description": "2x2 quadrant chart with labeled axes. One quadrant is highlighted as the target zone. Includes a strategy panel on the right side."
-    },
-    "horizontalProcess": {
-      "name": "Horizontal Process Flow",
-      "description": "Left-to-right sequential process with labeled stages. Each stage has an icon area, title, and description. Includes a bottom callout bar for additional context."
-    },
-    "problemSolution": {
-      "name": "Problem / Solution",
-      "description": "Left panel shows the problem with description and visual area. Right panel shows the numbered solution steps. Includes a bottom value-delivered callout bar."
-    },
-    "businessModel": {
-      "name": "Business Model Comparison",
-      "description": "Stacked cards showing old model vs new model with a strategic moat callout. Use for business model transitions, pricing changes, or strategy shifts."
-    },
-    "supplyChain": {
-      "name": "Supply Chain / Pipeline",
-      "description": "Chevron-style pipeline with 4-6 sequential stages. Each chevron has an icon area, title, and bullet points below."
-    },
-    "threeColumn": {
-      "name": "Three Column Info",
-      "description": "Three equal columns with icon area, title, and description in each. Clean layout for presenting three related concepts, options, or categories."
-    },
-    "challengeTable": {
-      "name": "Challenge / Mitigation Table",
-      "description": "Two-column table with icon rows. Left column shows challenges, right column shows mitigations. Each row has an icon area and text content."
-    },
-    "closingSlide": {
-      "name": "Closing / Summary Slide",
-      "description": "Bold central statement with supporting bullet points below. Use as a final takeaway or key message slide."
-    }
+    "title": "Hero opening with optional highlights panel",
+    "section": "Full-colour divider with optional number",
+    "agenda": "Numbered rows, 2 columns above 4 items",
+    "closing": "Key statement plus 2-4 supporting cards",
+    "bullets": "Large bullets with optional aside card",
+    "columns": "2-4 accent-topped cards (label, stat, title, text, items)",
+    "quote": "Large quote with attribution",
+    "codeExplain": "Code block beside numbered explanation",
+    "process": "3-5 numbered step cards with arrows and optional callout",
+    "timeline": "3-5 dated phases (roadmap)",
+    "kpi": "Stat tiles plus native chart and takeaways",
+    "chart": "Native chart with takeaways panel",
+    "table": "Styled native table with optional highlighted column",
+    "comparison": "Product x feature matrix with recommended column and verdict",
+    "prosCons": "Two-panel pros and cons with verdict bar",
+    "beforeAfter": "Before and after panels",
+    "pricingCards": "2-4 plan cards with highlighted recommendation",
+    "diagram": "sequence | class | er | state | flow | architecture, native shapes or Mermaid",
+    "html": "Hand-written HTML slide",
+    "panels": "Mixed-content grid: chart, table, bullets, stats, text, diagram, image, scorecard, chips, callout",
+    "insightSummary": "Headline, numbered findings with evidence stats, so-what callout",
+    "techDeepDive": "Concept text, diagram or image, metrics strip",
+    "benchmark": "Chart, results table, findings, methodology",
+    "scorecard": "Weighted criteria table, radar chart, recommendation",
+    "riskMatrix": "Risk table with heat-coloured likelihood, impact, severity and mitigation",
+    "landscape": "Technology landscape: categories with tagged chips (adopt, trial, assess, hold)",
+    "sources": "References in columns"
   },
   "visualElements": {
     "blueprintGrid": {
@@ -169,12 +140,101 @@
     }
   },
   "slideDefaults": {
-    "width": 13.333,
-    "height": 7.5,
+    "width": 10,
+    "height": 5.625,
     "unit": "inches",
-    "marginTop": 0.3,
-    "marginBottom": 0.3,
-    "marginLeft": 0.4,
-    "marginRight": 0.4
+    "note": "HTML body is 720pt x 405pt"
+  },
+  "density": {
+    "default": "medium",
+    "note": "Tokens in pt unless noted. fill = share of the body height a content-sized card row should occupy; extras = max extra panels on composed slides (prosCons etc.).",
+    "levels": {
+      "low": {
+        "margin": 28,
+        "top": 16,
+        "bottom": 16,
+        "gap": 14,
+        "title": 22,
+        "sub": 12,
+        "kicker": 9,
+        "take": 12,
+        "pad": "12pt 14pt",
+        "cardTitle": 14,
+        "panelTitle": 12,
+        "bodyMin": 12,
+        "bodyMax": 18,
+        "tableMin": 10.5,
+        "tableMax": 12,
+        "tableRowMax": 0.5,
+        "tableRowMin": 0.3,
+        "tableRows": 8,
+        "li": 0.6,
+        "chart": 10,
+        "aside": 210,
+        "src": 9,
+        "stat": 28,
+        "fill": 0.5,
+        "extras": 0
+      },
+      "medium": {
+        "margin": 24,
+        "top": 14,
+        "bottom": 14,
+        "gap": 10,
+        "title": 20,
+        "sub": 10.5,
+        "kicker": 9,
+        "take": 11,
+        "pad": "9pt 11pt",
+        "cardTitle": 12.5,
+        "panelTitle": 11,
+        "bodyMin": 10,
+        "bodyMax": 16,
+        "tableMin": 9.5,
+        "tableMax": 10.5,
+        "tableRowMax": 0.46,
+        "tableRowMin": 0.26,
+        "tableRows": 10,
+        "li": 0.45,
+        "chart": 9,
+        "aside": 190,
+        "src": 9,
+        "stat": 22,
+        "fill": 0.62,
+        "extras": 2
+      },
+      "high": {
+        "margin": 18,
+        "top": 10,
+        "bottom": 10,
+        "gap": 6,
+        "title": 17,
+        "sub": 9.5,
+        "kicker": 9,
+        "take": 10,
+        "pad": "6pt 8pt",
+        "cardTitle": 11,
+        "panelTitle": 10,
+        "bodyMin": 9.5,
+        "bodyMax": 11.5,
+        "tableMin": 9,
+        "tableMax": 10,
+        "tableRowMax": 0.3,
+        "tableRowMin": 0.2,
+        "tableRows": 16,
+        "li": 0.3,
+        "chart": 9,
+        "aside": 170,
+        "src": 9,
+        "stat": 18,
+        "fill": 0.85,
+        "extras": 3
+      }
+    },
+    "presets": {
+      "tech-insight": {
+        "density": "high"
+      }
+    }
   }
 }

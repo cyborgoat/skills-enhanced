@@ -1,0 +1,972 @@
+{
+ "title": "Orders Platform Review",
+ "slides": [
+  {
+   "type": "title",
+   "title": "Orders Platform Review",
+   "subtitle": "Architecture, performance and vendor choice",
+   "meta": "Engineering | Q4 planning",
+   "highlights": [
+    {
+     "label": "SCOPE",
+     "text": "Checkout to fulfilment"
+    },
+    {
+     "label": "DECISION",
+     "text": "Pick a message broker"
+    },
+    {
+     "label": "OUTCOME",
+     "text": "Roadmap for 2 quarters"
+    }
+   ]
+  },
+  {
+   "type": "agenda",
+   "title": "Agenda",
+   "items": [
+    {
+     "title": "Where we are",
+     "text": "KPIs and trend"
+    },
+    {
+     "title": "How it works",
+     "text": "Flows and data model"
+    },
+    {
+     "title": "Architecture",
+     "text": "Layers and dependencies"
+    },
+    {
+     "title": "Choosing a broker",
+     "text": "Comparison and trade-offs"
+    },
+    {
+     "title": "Pricing options",
+     "text": "Plans for rollout"
+    },
+    {
+     "title": "Roadmap",
+     "text": "Next two quarters"
+    }
+   ]
+  },
+  {
+   "type": "kpi",
+   "title": "Orders are growing, latency is not",
+   "subtitle": "Last 6 months",
+   "stats": [
+    {
+     "label": "Orders / day",
+     "value": "182k",
+     "delta": "+24% vs H1"
+    },
+    {
+     "label": "p95 latency",
+     "value": "310 ms",
+     "delta": "-18%"
+    },
+    {
+     "label": "Error rate",
+     "value": "0.42%",
+     "delta": "-0.1 pt"
+    },
+    {
+     "label": "Uptime",
+     "value": "99.97%",
+     "delta": "SLO 99.9%"
+    }
+   ],
+   "chart": {
+    "type": "line",
+    "labels": [
+     "Jun",
+     "Jul",
+     "Aug",
+     "Sep",
+     "Oct",
+     "Nov"
+    ],
+    "series": [
+     {
+      "name": "Orders (k/day)",
+      "values": [
+       118,
+       126,
+       139,
+       151,
+       166,
+       182
+      ]
+     }
+    ],
+    "title": "Daily orders (thousands)",
+    "min": 0
+   },
+   "insights": [
+    "Peak load is **2.3x** the daily average",
+    "Checkout drives 71% of traffic",
+    "Queue depth is the main scaling limit"
+   ]
+  },
+  {
+   "type": "table",
+   "title": "Service ownership and SLOs",
+   "subtitle": "Seven core services",
+   "columns": [
+    "Service",
+    "Owner",
+    "Language",
+    "p95 (ms)",
+    "SLO",
+    "Status"
+   ],
+   "colW": [
+    1.6,
+    1.2,
+    1,
+    0.8,
+    0.8,
+    1
+   ],
+   "rows": [
+    [
+     "Checkout",
+     "Payments",
+     "Java",
+     "240",
+     "99.95%",
+     "Healthy"
+    ],
+    [
+     "Catalog",
+     "Discovery",
+     "Go",
+     "90",
+     "99.9%",
+     "Healthy"
+    ],
+    [
+     "Inventory",
+     "Supply",
+     "Go",
+     "130",
+     "99.9%",
+     {
+      "text": "At risk",
+      "color": "#9A6700",
+      "bold": true
+     }
+    ],
+    [
+     "Pricing",
+     "Discovery",
+     "Kotlin",
+     "160",
+     "99.9%",
+     "Healthy"
+    ],
+    [
+     "Orders",
+     "Fulfilment",
+     "Java",
+     "310",
+     "99.95%",
+     {
+      "text": "At risk",
+      "color": "#9A6700",
+      "bold": true
+     }
+    ],
+    [
+     "Shipping",
+     "Fulfilment",
+     "Python",
+     "280",
+     "99.5%",
+     "Healthy"
+    ],
+    [
+     "Notifications",
+     "Growth",
+     "Node",
+     "75",
+     "99%",
+     "Healthy"
+    ]
+   ],
+   "align": [
+    "left",
+    "left",
+    "left",
+    "center",
+    "center",
+    "center"
+   ],
+   "note": "Latency measured at the gateway over the last 30 days."
+  },
+  {
+   "type": "diagram",
+   "title": "Place order: sequence",
+   "subtitle": "Happy path through checkout",
+   "kind": "sequence",
+   "mode": "native",
+   "data": {
+    "actors": [
+     "Client",
+     "Gateway",
+     "Orders",
+     "Payments",
+     "Broker"
+    ],
+    "messages": [
+     {
+      "from": "Client",
+      "to": "Gateway",
+      "text": "POST /orders"
+     },
+     {
+      "from": "Gateway",
+      "to": "Orders",
+      "text": "createOrder()"
+     },
+     {
+      "from": "Orders",
+      "to": "Payments",
+      "text": "authorize(card)"
+     },
+     {
+      "from": "Payments",
+      "to": "Orders",
+      "text": "approved",
+      "type": "return"
+     },
+     {
+      "from": "Orders",
+      "to": "Orders",
+      "text": "persist order"
+     },
+     {
+      "from": "Orders",
+      "to": "Broker",
+      "text": "OrderPlaced",
+      "type": "async"
+     },
+     {
+      "from": "Orders",
+      "to": "Gateway",
+      "text": "201 Created",
+      "type": "return"
+     },
+     {
+      "from": "Gateway",
+      "to": "Client",
+      "text": "order id",
+      "type": "return"
+     }
+    ]
+   },
+   "notes": [
+    "Payment is **synchronous**",
+    "Fulfilment is **async** via the broker",
+    "Failures roll back before the event"
+   ],
+   "notesTitle": "Key points"
+  },
+  {
+   "type": "diagram",
+   "title": "Domain model: class diagram",
+   "kind": "class",
+   "mode": "native",
+   "data": {
+    "classes": [
+     {
+      "name": "Order",
+      "attrs": [
+       "- id: UUID",
+       "- status: Status",
+       "- total: Money"
+      ],
+      "methods": [
+       "+ place()",
+       "+ cancel()"
+      ]
+     },
+     {
+      "name": "OrderLine",
+      "attrs": [
+       "- sku: String",
+       "- qty: int"
+      ],
+      "methods": [
+       "+ subtotal(): Money"
+      ]
+     },
+     {
+      "name": "Payment",
+      "stereotype": "interface",
+      "attrs": [],
+      "methods": [
+       "+ authorize(): Result"
+      ]
+     },
+     {
+      "name": "CardPayment",
+      "attrs": [
+       "- token: String"
+      ],
+      "methods": [
+       "+ authorize(): Result"
+      ]
+     },
+     {
+      "name": "WalletPayment",
+      "attrs": [
+       "- walletId: String"
+      ],
+      "methods": [
+       "+ authorize(): Result"
+      ]
+     },
+     {
+      "name": "Customer",
+      "attrs": [
+       "- id: UUID",
+       "- email: String"
+      ],
+      "methods": []
+     }
+    ],
+    "relations": [
+     {
+      "from": "Order",
+      "to": "OrderLine",
+      "type": "compose"
+     },
+     {
+      "from": "Order",
+      "to": "Payment",
+      "type": "depend"
+     },
+     {
+      "from": "CardPayment",
+      "to": "Payment",
+      "type": "implement"
+     },
+     {
+      "from": "WalletPayment",
+      "to": "Payment",
+      "type": "implement"
+     },
+     {
+      "from": "Customer",
+      "to": "Order",
+      "type": "assoc"
+     }
+    ]
+   }
+  },
+  {
+   "type": "diagram",
+   "title": "Platform architecture",
+   "subtitle": "Layers and main dependencies",
+   "kind": "architecture",
+   "mode": "native",
+   "data": {
+    "layers": [
+     {
+      "name": "Clients",
+      "nodes": [
+       {
+        "id": "web",
+        "label": "Web app"
+       },
+       {
+        "id": "mob",
+        "label": "Mobile app"
+       },
+       {
+        "id": "part",
+        "label": "Partner API"
+       }
+      ]
+     },
+     {
+      "name": "Edge",
+      "nodes": [
+       {
+        "id": "gw",
+        "label": "API gateway",
+        "sub": "auth, rate limits"
+       }
+      ]
+     },
+     {
+      "name": "Services",
+      "nodes": [
+       {
+        "id": "ord",
+        "label": "Orders"
+       },
+       {
+        "id": "pay",
+        "label": "Payments"
+       },
+       {
+        "id": "inv",
+        "label": "Inventory"
+       },
+       {
+        "id": "ship",
+        "label": "Shipping"
+       }
+      ]
+     },
+     {
+      "name": "Data",
+      "nodes": [
+       {
+        "id": "pg",
+        "label": "PostgreSQL"
+       },
+       {
+        "id": "bus",
+        "label": "Message broker"
+       },
+       {
+        "id": "cache",
+        "label": "Redis"
+       }
+      ]
+     }
+    ],
+    "edges": [
+     {
+      "from": "web",
+      "to": "gw"
+     },
+     {
+      "from": "mob",
+      "to": "gw"
+     },
+     {
+      "from": "part",
+      "to": "gw"
+     },
+     {
+      "from": "gw",
+      "to": "ord"
+     },
+     {
+      "from": "ord",
+      "to": "pay"
+     },
+     {
+      "from": "ord",
+      "to": "pg"
+     },
+     {
+      "from": "ord",
+      "to": "bus"
+     },
+     {
+      "from": "inv",
+      "to": "cache"
+     },
+     {
+      "from": "ship",
+      "to": "bus",
+      "dashed": true
+     }
+    ]
+   }
+  },
+  {
+   "type": "diagram",
+   "title": "Order lifecycle: state machine",
+   "kind": "state",
+   "mode": "native",
+   "data": {
+    "states": [
+     {
+      "id": "Created"
+     },
+     {
+      "id": "Paid"
+     },
+     {
+      "id": "Packed"
+     },
+     {
+      "id": "Shipped"
+     },
+     {
+      "id": "Delivered"
+     },
+     {
+      "id": "Cancelled"
+     }
+    ],
+    "transitions": [
+     {
+      "from": "[*]",
+      "to": "Created"
+     },
+     {
+      "from": "Created",
+      "to": "Paid",
+      "label": "payment ok"
+     },
+     {
+      "from": "Paid",
+      "to": "Packed",
+      "label": "picked"
+     },
+     {
+      "from": "Packed",
+      "to": "Shipped",
+      "label": "handover"
+     },
+     {
+      "from": "Shipped",
+      "to": "Delivered"
+     },
+     {
+      "from": "Delivered",
+      "to": "[*]"
+     },
+     {
+      "from": "Created",
+      "to": "Cancelled",
+      "label": "timeout"
+     }
+    ]
+   },
+   "caption": "Native shapes: every box and arrow is editable in PowerPoint."
+  },
+  {
+   "type": "diagram",
+   "title": "Data model: ER diagram",
+   "kind": "er",
+   "mode": "native",
+   "data": {
+    "entities": [
+     {
+      "name": "customers",
+      "fields": [
+       {
+        "key": "PK",
+        "name": "id",
+        "type": "uuid"
+       },
+       {
+        "name": "email",
+        "type": "text"
+       },
+       {
+        "name": "created_at",
+        "type": "timestamp"
+       }
+      ]
+     },
+     {
+      "name": "orders",
+      "fields": [
+       {
+        "key": "PK",
+        "name": "id",
+        "type": "uuid"
+       },
+       {
+        "key": "FK",
+        "name": "customer_id",
+        "type": "uuid"
+       },
+       {
+        "name": "status",
+        "type": "text"
+       },
+       {
+        "name": "total",
+        "type": "numeric"
+       }
+      ]
+     },
+     {
+      "name": "order_lines",
+      "fields": [
+       {
+        "key": "PK",
+        "name": "id",
+        "type": "uuid"
+       },
+       {
+        "key": "FK",
+        "name": "order_id",
+        "type": "uuid"
+       },
+       {
+        "key": "FK",
+        "name": "sku",
+        "type": "text"
+       },
+       {
+        "name": "qty",
+        "type": "int"
+       }
+      ]
+     },
+     {
+      "name": "products",
+      "fields": [
+       {
+        "key": "PK",
+        "name": "sku",
+        "type": "text"
+       },
+       {
+        "name": "title",
+        "type": "text"
+       },
+       {
+        "name": "price",
+        "type": "numeric"
+       }
+      ]
+     }
+    ],
+    "relations": [
+     {
+      "from": "customers",
+      "to": "orders",
+      "card": "1:N"
+     },
+     {
+      "from": "orders",
+      "to": "order_lines",
+      "card": "1:N"
+     },
+     {
+      "from": "products",
+      "to": "order_lines",
+      "card": "1:N"
+     }
+    ]
+   }
+  },
+  {
+   "type": "diagram",
+   "title": "Retry flow (Mermaid)",
+   "subtitle": "Rendered with Mermaid for complex layouts",
+   "kind": "flow",
+   "mode": "mermaid",
+   "mermaid": "flowchart LR\n  A[Consume event] --> B{Valid?}\n  B -- yes --> C[Process]\n  B -- no --> D[Dead letter queue]\n  C --> E{Success?}\n  E -- yes --> F[Ack]\n  E -- no --> G[Retry with backoff]\n  G --> C\n  G -. max attempts .-> D"
+  },
+  {
+   "type": "comparison",
+   "title": "Message broker comparison",
+   "subtitle": "Scored against our requirements",
+   "recommended": 1,
+   "products": [
+    "Kafka",
+    "RabbitMQ",
+    "SQS + SNS",
+    "Pulsar"
+   ],
+   "rows": [
+    {
+     "group": "Capabilities"
+    },
+    {
+     "name": "Ordering guarantees",
+     "values": [
+      true,
+      "Per queue",
+      "FIFO only",
+      true
+     ]
+    },
+    {
+     "name": "Replay events",
+     "values": [
+      true,
+      false,
+      false,
+      true
+     ]
+    },
+    {
+     "name": "Throughput",
+     "values": [
+      "Very high",
+      "Medium",
+      "High",
+      "Very high"
+     ]
+    },
+    {
+     "group": "Operations"
+    },
+    {
+     "name": "Managed offering",
+     "values": [
+      true,
+      true,
+      true,
+      "Partial"
+     ]
+    },
+    {
+     "name": "Ops effort",
+     "values": [
+      "High",
+      "Medium",
+      "Low",
+      "High"
+     ]
+    },
+    {
+     "name": "Monthly cost (est.)",
+     "values": [
+      "$2.4k",
+      "$1.1k",
+      "$0.9k",
+      "$2.8k"
+     ]
+    }
+   ],
+   "verdict": {
+    "label": "VERDICT",
+    "text": "**RabbitMQ** fits today's load with the least effort; revisit Kafka if replay becomes a requirement."
+   }
+  },
+  {
+   "type": "prosCons",
+   "title": "RabbitMQ: trade-offs vs Kafka and SQS",
+   "subtitle": "Weighted by our requirements",
+   "pros": {
+    "items": [
+     "Mature, well understood by the team",
+     "Flexible routing (topic, fanout, headers)",
+     "Managed service on every cloud",
+     "Lowest migration effort: about 3 weeks",
+     "Sub-10 ms latency at current load"
+    ]
+   },
+   "cons": {
+    "items": [
+     "No native event replay",
+     "Ceiling near 50k msg/s per node",
+     "Clustering needs careful tuning",
+     "Fewer stream-processing integrations"
+    ]
+   },
+   "scores": {
+    "labels": [
+     "Throughput",
+     "Ordering",
+     "Replay",
+     "Ops effort",
+     "Cost",
+     "Team skills"
+    ],
+    "series": [
+     {
+      "name": "RabbitMQ",
+      "values": [
+       3,
+       4,
+       2,
+       4,
+       4,
+       5
+      ]
+     },
+     {
+      "name": "Kafka",
+      "values": [
+       5,
+       5,
+       5,
+       2,
+       2,
+       2
+      ]
+     },
+     {
+      "name": "SQS",
+      "values": [
+       4,
+       3,
+       1,
+       5,
+       5,
+       3
+      ]
+     }
+    ]
+   },
+   "facts": {
+    "title": "Key facts",
+    "columns": [
+     "Metric",
+     "RabbitMQ",
+     "Kafka"
+    ],
+    "colW": [
+     1.4,
+     1,
+     1
+    ],
+    "rows": [
+     [
+      "Peak msg/s",
+      "50k",
+      "1M+"
+     ],
+     [
+      "p99 latency",
+      "8 ms",
+      "25 ms"
+     ],
+     [
+      "Ops effort",
+      "0.5 FTE",
+      "1.5 FTE"
+     ],
+     [
+      "Monthly cost",
+      "$1.1k",
+      "$2.4k"
+     ],
+     [
+      "Replay",
+      "Outbox",
+      "Native"
+     ]
+    ]
+   },
+   "verdict": {
+    "label": "DECISION",
+    "text": "Adopt **RabbitMQ** now, with an outbox table to allow replay later."
+   },
+   "density": "high",
+   "stats": [
+    {
+     "label": "Weighted score",
+     "value": "4.0 / 5",
+     "delta": "Kafka 3.1, SQS 3.8"
+    },
+    {
+     "label": "Migration",
+     "value": "3 weeks"
+    },
+    {
+     "label": "Monthly cost",
+     "value": "$1.1k",
+     "delta": "-54% vs Kafka"
+    }
+   ]
+  },
+  {
+   "type": "pricingCards",
+   "title": "Rollout options",
+   "subtitle": "Per month, estimates",
+   "plans": [
+    {
+     "name": "Pilot",
+     "price": "$0.9k",
+     "unit": "per month",
+     "features": [
+      "One region",
+      "Orders and Payments only",
+      "Business-hours support"
+     ]
+    },
+    {
+     "name": "Standard",
+     "price": "$1.1k",
+     "unit": "per month",
+     "badge": "Recommended",
+     "highlight": true,
+     "features": [
+      "Two regions",
+      "All core services",
+      "24/7 on-call",
+      "Weekly capacity review"
+     ]
+    },
+    {
+     "name": "Scale",
+     "price": "$2.4k",
+     "unit": "per month",
+     "features": [
+      "Three regions",
+      "Event replay",
+      "Dedicated SRE",
+      "Quarterly game days"
+     ]
+    }
+   ]
+  },
+  {
+   "type": "timeline",
+   "title": "Roadmap",
+   "subtitle": "Next two quarters",
+   "phases": [
+    {
+     "date": "Dec",
+     "title": "Foundations",
+     "items": [
+      "Outbox table",
+      "Broker staging"
+     ],
+     "status": "now"
+    },
+    {
+     "date": "Jan",
+     "title": "Migrate",
+     "items": [
+      "Orders events",
+      "Dual-write checks"
+     ]
+    },
+    {
+     "date": "Feb",
+     "title": "Cut over",
+     "items": [
+      "Payments events",
+      "Retire old queue"
+     ]
+    },
+    {
+     "date": "Mar",
+     "title": "Optimise",
+     "items": [
+      "Autoscaling",
+      "Replay tooling"
+     ]
+    }
+   ]
+  },
+  {
+   "type": "closing",
+   "title": "Summary",
+   "statement": "Stay on RabbitMQ now, design for replay later.",
+   "points": [
+    {
+     "title": "Reliability",
+     "text": "Fix the two at-risk services first."
+    },
+    {
+     "title": "Cost",
+     "text": "About $1.1k a month for the standard rollout."
+    },
+    {
+     "title": "Next step",
+     "text": "Approve the December foundations work."
+    }
+   ]
+  }
+ ]
+}

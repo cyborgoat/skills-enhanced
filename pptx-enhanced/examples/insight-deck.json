@@ -1,0 +1,630 @@
+{
+ "title": "Event Streaming: Tech Insight",
+ "preset": "tech-insight",
+ "slides": [
+  {
+   "type": "title",
+   "title": "Event Streaming Platforms",
+   "subtitle": "Tech insight report: landscape, benchmarks and recommendation",
+   "meta": "Platform Engineering | Nov 2026",
+   "highlights": [
+    {
+     "label": "QUESTION",
+     "text": "Which broker should carry order events?"
+    },
+    {
+     "label": "METHOD",
+     "text": "Benchmarks, scorecard, risk review"
+    },
+    {
+     "label": "ANSWER",
+     "text": "RabbitMQ now, Kafka-ready design"
+    }
+   ]
+  },
+  {
+   "type": "insightSummary",
+   "kicker": "Executive summary",
+   "title": "Choose the simplest broker that meets 24-month load",
+   "takeaway": "RabbitMQ covers **3.1x** projected peak load at **46%** of Kafka's cost; replay is the only real gap and an outbox closes it.",
+   "findings": [
+    {
+     "title": "Load is well inside broker limits",
+     "text": "Projected peak is 16k msg/s in 24 months; a 3-node cluster sustains 50k.",
+     "stat": {
+      "value": "3.1x",
+      "label": "headroom"
+     }
+    },
+    {
+     "title": "Latency favours the lighter broker",
+     "text": "p99 of 8 ms versus 25 ms under the same producer profile.",
+     "stat": {
+      "value": "8 ms",
+      "label": "p99"
+     }
+    },
+    {
+     "title": "Operational cost is the differentiator",
+     "text": "Kafka needs about 1.5 FTE of platform time; RabbitMQ needs 0.5.",
+     "stat": {
+      "value": "-1 FTE",
+      "label": "ops effort"
+     }
+    },
+    {
+     "title": "Replay is the one capability gap",
+     "text": "An outbox table gives replay without changing the broker.",
+     "stat": {
+      "value": "3 wks",
+      "label": "to build"
+     }
+    }
+   ],
+   "sowhat": {
+    "label": "SO WHAT",
+    "text": "Approve the December foundations work and revisit Kafka only if sustained load passes 40k msg/s."
+   },
+   "source": "Source: internal load tests (Oct 2026), vendor pricing pages, platform on-call logs."
+  },
+  {
+   "type": "landscape",
+   "kicker": "Landscape",
+   "title": "Where the options sit today",
+   "subtitle": "Maturity reflects our own assessment",
+   "categories": [
+    {
+     "name": "Message brokers",
+     "items": [
+      {
+       "name": "RabbitMQ",
+       "tag": "adopt"
+      },
+      {
+       "name": "ActiveMQ",
+       "tag": "hold"
+      },
+      {
+       "name": "NATS",
+       "tag": "assess"
+      },
+      {
+       "name": "Amazon MQ",
+       "tag": "trial"
+      }
+     ],
+     "note": "Routing-first, low latency.",
+     "points": [
+      "Best fit for routing and request/reply",
+      "Sub-10 ms latency, small footprint",
+      "Weak at long retention and replay"
+     ]
+    },
+    {
+     "name": "Log streaming",
+     "items": [
+      {
+       "name": "Kafka",
+       "tag": "trial"
+      },
+      {
+       "name": "Pulsar",
+       "tag": "assess"
+      },
+      {
+       "name": "Redpanda",
+       "tag": "assess"
+      },
+      {
+       "name": "Kinesis",
+       "tag": "hold"
+      }
+     ],
+     "note": "Replay and retention first.",
+     "points": [
+      "Partitioned log with days of retention",
+      "Highest throughput; consumers replay freely",
+      "Needs dedicated ops skills"
+     ]
+    },
+    {
+     "name": "Cloud queues",
+     "items": [
+      {
+       "name": "SQS + SNS",
+       "tag": "adopt"
+      },
+      {
+       "name": "Pub/Sub",
+       "tag": "assess"
+      },
+      {
+       "name": "Service Bus",
+       "tag": "hold"
+      }
+     ],
+     "note": "Zero-ops, vendor-tied.",
+     "points": [
+      "Nothing to run or patch",
+      "Per-message pricing grows with volume",
+      "Limited ordering and replay"
+     ]
+    },
+    {
+     "name": "Glue and tooling",
+     "items": [
+      {
+       "name": "Debezium",
+       "tag": "trial"
+      },
+      {
+       "name": "Outbox relay",
+       "tag": "adopt"
+      },
+      {
+       "name": "Schema registry",
+       "tag": "trial"
+      },
+      {
+       "name": "OpenTelemetry",
+       "tag": "adopt"
+      }
+     ],
+     "note": "Makes any broker replayable.",
+     "points": [
+      "Outbox + relay adds replay to any broker",
+      "Schema registry prevents breaking events",
+      "Tracing ties events to requests"
+     ]
+    }
+   ],
+   "source": "Source: team assessment workshop, Oct 2026."
+  },
+  {
+   "type": "techDeepDive",
+   "kicker": "Deep dive",
+   "title": "How the outbox pattern adds replay to RabbitMQ",
+   "subtitle": "One transaction, two writes, a relay that publishes",
+   "concept": {
+    "title": "Mechanism",
+    "text": "The order service writes the order and an event row in **one database transaction**. A relay worker reads unsent rows in order and publishes them to the broker, then marks them sent.",
+    "bullets": [
+     "No dual-write: the event exists only if the order commits",
+     "At-least-once delivery; consumers must be idempotent",
+     "Replay = reset sent_at and let the relay re-publish",
+     "Relay lag is the one metric to alert on"
+    ]
+   },
+   "diagram": {
+    "kind": "architecture",
+    "mode": "native",
+    "title": "Data path",
+    "data": {
+     "layers": [
+      {
+       "name": "Service",
+       "nodes": [
+        {
+         "id": "svc",
+         "label": "Order service"
+        }
+       ]
+      },
+      {
+       "name": "Database",
+       "nodes": [
+        {
+         "id": "ord",
+         "label": "orders"
+        },
+        {
+         "id": "out",
+         "label": "outbox",
+         "sub": "event rows"
+        }
+       ]
+      },
+      {
+       "name": "Relay",
+       "nodes": [
+        {
+         "id": "rel",
+         "label": "Relay worker"
+        }
+       ]
+      },
+      {
+       "name": "Broker",
+       "nodes": [
+        {
+         "id": "mq",
+         "label": "RabbitMQ",
+         "sub": "topic exchange"
+        }
+       ]
+      },
+      {
+       "name": "Consumers",
+       "nodes": [
+        {
+         "id": "bill",
+         "label": "Billing"
+        },
+        {
+         "id": "ship",
+         "label": "Shipping"
+        },
+        {
+         "id": "ana",
+         "label": "Analytics"
+        }
+       ]
+      }
+     ],
+     "edges": [
+      {
+       "from": "svc",
+       "to": "ord",
+       "label": "txn"
+      },
+      {
+       "from": "svc",
+       "to": "out"
+      },
+      {
+       "from": "out",
+       "to": "rel",
+       "label": "poll"
+      },
+      {
+       "from": "rel",
+       "to": "mq",
+       "label": "publish"
+      },
+      {
+       "from": "mq",
+       "to": "bill"
+      },
+      {
+       "from": "mq",
+       "to": "ship"
+      },
+      {
+       "from": "mq",
+       "to": "ana"
+      }
+     ]
+    }
+   },
+   "metrics": [
+    {
+     "label": "Relay lag p99",
+     "value": "120 ms"
+    },
+    {
+     "label": "Throughput",
+     "value": "14k/s"
+    },
+    {
+     "label": "Duplicate rate",
+     "value": "0.02%"
+    },
+    {
+     "label": "Extra storage",
+     "value": "+3 GB/mo"
+    }
+   ],
+   "source": "Source: staging soak test, 7 days at 2x production load."
+  },
+  {
+   "type": "benchmark",
+   "kicker": "Benchmark",
+   "title": "Throughput and latency under the same producer profile",
+   "chart": {
+    "type": "bar",
+    "title": "Sustained throughput (k msg/s)",
+    "labels": [
+     "RabbitMQ",
+     "Kafka",
+     "SQS",
+     "Pulsar"
+    ],
+    "series": [
+     {
+      "name": "k msg/s",
+      "values": [
+       52,
+       410,
+       120,
+       380
+      ]
+     }
+    ]
+   },
+   "table": {
+    "title": "Results",
+    "columns": [
+     "Broker",
+     "p50 ms",
+     "p99 ms",
+     "CPU %",
+     "Loss"
+    ],
+    "colW": [
+     1.4,
+     0.8,
+     0.8,
+     0.8,
+     0.7
+    ],
+    "rows": [
+     [
+      "RabbitMQ",
+      "3",
+      "8",
+      "62",
+      "0"
+     ],
+     [
+      "Kafka",
+      "9",
+      "25",
+      "48",
+      "0"
+     ],
+     [
+      "SQS",
+      "14",
+      "40",
+      "n/a",
+      "0"
+     ],
+     [
+      "Pulsar",
+      "11",
+      "31",
+      "51",
+      "0"
+     ]
+    ],
+    "highlightCol": 0
+   },
+   "findings": [
+    "Kafka and Pulsar are 7-8x faster in raw throughput, far above our need",
+    "RabbitMQ wins on latency at our load profile",
+    "No message loss in any 6-hour run"
+   ],
+   "method": "3 brokers nodes (8 vCPU, 32 GB), 1 KB messages, 6-hour steady state, producers on separate hosts.",
+   "source": "Source: internal load tests, Oct 2026."
+  },
+  {
+   "type": "scorecard",
+   "kicker": "Evaluation",
+   "title": "Weighted scorecard",
+   "subtitle": "Scores 1-5; weights agreed with product and SRE",
+   "options": [
+    "RabbitMQ",
+    "Kafka",
+    "SQS"
+   ],
+   "criteria": [
+    {
+     "name": "Throughput headroom",
+     "weight": 2,
+     "scores": [
+      3,
+      5,
+      4
+     ]
+    },
+    {
+     "name": "Latency",
+     "weight": 2,
+     "scores": [
+      5,
+      3,
+      3
+     ]
+    },
+    {
+     "name": "Ordering",
+     "weight": 1,
+     "scores": [
+      4,
+      5,
+      3
+     ]
+    },
+    {
+     "name": "Replay",
+     "weight": 1,
+     "scores": [
+      2,
+      5,
+      1
+     ]
+    },
+    {
+     "name": "Ops effort",
+     "weight": 3,
+     "scores": [
+      4,
+      2,
+      5
+     ]
+    },
+    {
+     "name": "Cost",
+     "weight": 2,
+     "scores": [
+      4,
+      2,
+      5
+     ]
+    },
+    {
+     "name": "Team skills",
+     "weight": 2,
+     "scores": [
+      5,
+      2,
+      3
+     ]
+    }
+   ],
+   "recommendation": {
+    "label": "RECOMMENDATION",
+    "text": "**RabbitMQ** scores highest overall; SQS is the fallback if we want zero ops."
+   }
+  },
+  {
+   "type": "riskMatrix",
+   "kicker": "Risk review",
+   "title": "Risks of adopting RabbitMQ",
+   "risks": [
+    {
+     "risk": "Event replay needed sooner than planned",
+     "likelihood": "Medium",
+     "impact": "High",
+     "mitigation": "Ship outbox first; keep Kafka migration runbook",
+     "owner": "Platform"
+    },
+    {
+     "risk": "Cluster partition during peak",
+     "likelihood": "Low",
+     "impact": "High",
+     "mitigation": "Quorum queues, pause-minority, game-day twice a year",
+     "owner": "SRE"
+    },
+    {
+     "risk": "Throughput ceiling reached",
+     "likelihood": "Low",
+     "impact": "Medium",
+     "mitigation": "Alert at 60% of 50k; shard by tenant",
+     "owner": "Platform"
+    },
+    {
+     "risk": "Consumers not idempotent",
+     "likelihood": "High",
+     "impact": "Medium",
+     "mitigation": "Idempotency keys in the shared client library",
+     "owner": "Orders"
+    },
+    {
+     "risk": "Operational knowledge concentrated in two people",
+     "likelihood": "Medium",
+     "impact": "Medium",
+     "mitigation": "Runbooks and rotation of on-call",
+     "owner": "SRE"
+    },
+    {
+     "risk": "Managed offering price change",
+     "likelihood": "Low",
+     "impact": "Low",
+     "mitigation": "Annual commitment and exit plan",
+     "owner": "Finance"
+    }
+   ],
+   "summary": "One high-severity risk (replay timing) is covered by the outbox work in December.",
+   "source": "Source: risk workshop with Platform, SRE and Orders, Nov 2026."
+  },
+  {
+   "type": "panels",
+   "kicker": "Cost",
+   "title": "Cost and capacity outlook",
+   "layout": "0|1/2",
+   "colFlex": [
+    1.3,
+    1
+   ],
+   "panels": [
+    {
+     "kind": "chart",
+     "title": "Monthly cost by option ($k)",
+     "chart": {
+      "type": "line",
+      "labels": [
+       "Q1",
+       "Q2",
+       "Q3",
+       "Q4",
+       "Q5",
+       "Q6"
+      ],
+      "series": [
+       {
+        "name": "RabbitMQ",
+        "values": [
+         1.1,
+         1.1,
+         1.3,
+         1.4,
+         1.6,
+         1.8
+        ]
+       },
+       {
+        "name": "Kafka",
+        "values": [
+         2.4,
+         2.4,
+         2.6,
+         2.9,
+         3.2,
+         3.6
+        ]
+       },
+       {
+        "name": "SQS",
+        "values": [
+         0.9,
+         1.0,
+         1.2,
+         1.5,
+         1.9,
+         2.4
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "kind": "image",
+     "title": "p99 latency vs load",
+     "path": "assets/latency.svg"
+    },
+    {
+     "kind": "stats",
+     "title": "Headline numbers",
+     "stats": [
+      {
+       "label": "24-mo TCO",
+       "value": "$38k",
+       "delta": "-54% vs Kafka"
+      },
+      {
+       "label": "Break-even",
+       "value": "40k/s"
+      }
+     ]
+    }
+   ],
+   "source": "Source: vendor price lists; latency from internal load tests."
+  },
+  {
+   "type": "sources",
+   "kicker": "Appendix",
+   "title": "Sources and references",
+   "items": [
+    "Internal load-test report, Platform Engineering, Oct 2026",
+    "RabbitMQ documentation: quorum queues and clustering guide",
+    "Apache Kafka documentation: design and operations",
+    "Amazon SQS developer guide and pricing",
+    "Apache Pulsar documentation: architecture overview",
+    "Transactional outbox pattern, microservices.io",
+    "Risk workshop notes, Nov 2026",
+    "Team skills survey, Sep 2026"
+   ]
+  }
+ ]
+}

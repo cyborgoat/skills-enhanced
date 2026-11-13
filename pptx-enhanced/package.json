@@ -1,13 +1,14 @@
 {
   "name": "pptx-generator-enhanced",
   "version": "2.0.0",
-  "description": "Enhanced PowerPoint generator with SVG diagram generation, multi-format image support, and Manim GIF animations",
+  "description": "Compact PowerPoint deck builder: JSON spec to editable pptx with tables, comparisons, charts and native technical diagrams",
   "dependencies": {
     "playwright": "^1.57.0",
     "pptxgenjs": "^4.0.1",
     "sharp": "^0.34.5"
   },
   "scripts": {
-    "install-browsers": "npx playwright install chromium"
+    "install-browsers": "npx playwright install chromium",
+    "example": "node examples/build.js"
   }
 }

@@ -15,7 +15,7 @@
  *
  * OPTIONS:
  *   --width   Target PNG width in pixels (default: 800)
- *   --theme   Mermaid theme: 'default' | 'dark' | 'neutral' | 'forest' (default: 'neutral')
+ *   --theme   Mermaid theme: 'base' | 'default' | 'dark' | 'neutral' | 'forest' (default: 'base' = deck palette)
  *   --bg      Background color (default: 'transparent')
  *   --def     Pass Mermaid definition as a string instead of a file
  */
@@ -24,19 +24,10 @@ const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 
-// Crimson Dark palette for custom theming
-const THEME_COLORS = {
-  primary: '#C62828',
-  primaryDark: '#8E0000',
-  primaryLight: '#FFCDD2',
-  secondary: '#FFB300',
-  secondaryLight: '#FFF8E1',
-  accent: '#E53935',
-  background: '#1A1A2E',
-  text: '#FFFFFF',
-  textMedium: '#B0BEC5',
-  border: '#3D3D5C',
-};
+// Colours come from the shared theme (default-pptx-config.json)
+const { loadTheme } = require('./theme');
+const T = loadTheme();
+const THEME_COLORS = T;
 
 /**
  * Render a Mermaid diagram definition string to a PNG or SVG file.
@@ -45,7 +36,7 @@ const THEME_COLORS = {
  * @param {string} outputPath  - Path to write the output PNG or SVG
  * @param {object} [options]
  * @param {number} [options.width=800]       - Target PNG width in pixels
- * @param {string} [options.theme='neutral'] - Mermaid theme name
+ * @param {string} [options.theme='base'] - Mermaid theme name
  * @param {string} [options.bg='transparent'] - Background color
  * @param {object} [options.themeVariables]  - Custom mermaid themeVariables overrides
  * @returns {Promise<string>} outputPath
@@ -53,26 +44,31 @@ const THEME_COLORS = {
 async function renderMermaid(definition, outputPath, options = {}) {
   const {
     width = 800,
-    theme = 'neutral',
+    theme = 'base',
     bg = 'transparent',
     themeVariables = {},
   } = options;
 
-  // Merge defaults into themeVariables when using the 'base' theme
+  // 'base' theme picks up the deck palette (light backgrounds, dark text)
   const vars = theme === 'base' ? {
-    primaryColor: THEME_COLORS.primaryLight,
-    primaryBorderColor: THEME_COLORS.primary,
-    primaryTextColor: THEME_COLORS.text,
-    secondaryColor: THEME_COLORS.secondaryLight,
-    secondaryBorderColor: THEME_COLORS.secondary,
-    secondaryTextColor: '#5D4037',
-    tertiaryColor: '#FFFFFF',
-    lineColor: THEME_COLORS.primary,
-    textColor: '#37474F',
-    mainBkg: '#FFFFFF',
-    nodeBorder: THEME_COLORS.primary,
-    clusterBkg: '#FFFFFF',
-    edgeLabelBackground: '#FFFFFF',
+    primaryColor: T.primaryLight,
+    primaryBorderColor: T.primary,
+    primaryTextColor: T.ink,
+    secondaryColor: T.secondaryLight,
+    secondaryBorderColor: T.secondary,
+    secondaryTextColor: T.onSecondary,
+    tertiaryColor: T.bg,
+    lineColor: T.accent,
+    textColor: T.ink,
+    mainBkg: T.primaryLight,
+    nodeBorder: T.primary,
+    clusterBkg: T.alt,
+    edgeLabelBackground: T.bg,
+    actorBkg: T.primaryLight,
+    actorBorder: T.primary,
+    signalColor: T.ink,
+    noteBkgColor: T.secondaryLight,
+    noteBorderColor: T.secondary,
     fontFamily: 'Arial',
     fontSize: '18px',
     ...themeVariables,
@@ -218,7 +214,7 @@ function escapeHtml(str) {
 if (require.main === module) {
   const args = process.argv.slice(2);
   if (args.length < 2 && !args.includes('--help')) {
-    console.error('Usage: node render-mermaid.js <input.mmd> <output.png|output.svg> [--width 800] [--theme neutral] [--bg transparent]');
+    console.error('Usage: node render-mermaid.js <input.mmd> <output.png|output.svg> [--width 800] [--theme base] [--bg transparent]');
     console.error('       node render-mermaid.js --def "graph LR; A-->B" <output.png> [options]');
     process.exit(1);
   }
@@ -233,7 +229,7 @@ Usage:
 
 Options:
   --width <px>    Target PNG width (default: 800, ignored for SVG output)
-  --theme <name>  Mermaid theme: default, dark, neutral, forest, base (default: neutral)
+  --theme <name>  Mermaid theme: default, dark, neutral, forest, base (default: base)
   --bg <color>    Background color or 'transparent' (default: transparent)
   --help          Show this help
     `);
@@ -246,7 +242,7 @@ Options:
   }
 
   const widthOpt = parseInt(getArg('--width', '800'), 10);
-  const themeOpt = getArg('--theme', 'neutral');
+  const themeOpt = getArg('--theme', 'base');
   const bgOpt = getArg('--bg', 'transparent');
 
   const defIdx = args.indexOf('--def');
