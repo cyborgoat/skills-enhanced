@@ -1,0 +1,80 @@
+{
+  "title": "Charts in a deck",
+  "slides": [
+    {
+      "type": "title",
+      "title": "Revenue review",
+      "subtitle": "Charts from dataviz-enhanced, deck from pptx-enhanced",
+      "meta": "Example"
+    },
+    {
+      "type": "panels",
+      "title": "Revenue peaked in June, then settled",
+      "kicker": "Trend",
+      "layout": "0|1",
+      "colFlex": [
+        1.9,
+        1
+      ],
+      "panels": [
+        {
+          "kind": "image",
+          "title": "Monthly revenue and costs ($k)",
+          "path": "out/slide-01-line.png"
+        },
+        {
+          "kind": "bullets",
+          "title": "What the chart shows",
+          "items": [
+            "Two anomalies flagged: a dip to **60** and a peak of **260**",
+            "Underlying growth of about 3 per month",
+            "Costs track revenue at roughly 62%"
+          ]
+        }
+      ],
+      "source": "Source: monthly.csv (illustrative data)"
+    },
+    {
+      "type": "panels",
+      "title": "Where revenue and traffic come from",
+      "kicker": "Breakdown",
+      "layout": "0|1;2|3",
+      "rowFlex": [
+        1,
+        1
+      ],
+      "panels": [
+        {
+          "kind": "image",
+          "title": "Revenue by product ($k)",
+          "path": "out/slide-02-bar.png"
+        },
+        {
+          "kind": "image",
+          "title": "Revenue share",
+          "path": "out/slide-04-donut.png"
+        },
+        {
+          "kind": "image",
+          "title": "Visits by weekday and hour",
+          "path": "out/slide-03-heat.png"
+        },
+        {
+          "kind": "stats",
+          "title": "Headline",
+          "stats": [
+            {
+              "label": "Top product",
+              "value": "Alpha",
+              "delta": "32% of revenue"
+            },
+            {
+              "label": "Peak slot",
+              "value": "Tue 9am"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

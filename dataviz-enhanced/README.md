@@ -1,76 +1,39 @@
 # dataviz-enhanced
 
-Publication-quality, Tufte-inspired data visualizations with optional anomaly highlighting. A Claude Code skill for generating charts from structured data (CSV, JSON, Excel) or unstructured text.
+Claude Code skill that turns data into clean, publication-quality charts. Built on **Altair (Vega-Lite)**: every chart is a declarative spec, rendered to PNG, SVG or PDF without a browser, or exported as interactive HTML or the JSON spec.
 
-## Features
+- 13 chart types: line, timeseries, bar, hbar, scatter, bubble, histogram, box, heatmap, pie, donut, area, small multiples
+- Two looks: `tufte` (colourblind-safe default) and `editorial` (matches `pptx-enhanced` decks); `slide` and `report` size presets
+- Anomaly detection (robust z-score on detrended values, IQR, min/max, level shifts) drawn as highlights
+- Input: CSV/TSV (delimiter and decimal-comma detection), JSON, Excel, YAML, Markdown and HTML tables; `1,200` / `1.2%` / `$3.1` become numbers
+- Data reduction for big data: `--top`, `--agg --groupby`, `--max-categories`
 
-- 13 chart types: line, bar, hbar, scatter, histogram, heatmap, box, pie, donut, area, bubble, timeseries, small multiples
-- Tufte-inspired minimal styling: no chart junk, clean typography, accessible colors
-- Anomaly detection with Z-score, IQR, min/max, and changepoint methods
-- Highlight overlays: halo rings, color shifts, annotations, glow effects, bands
-- Multi-format input: CSV, TSV, JSON, Excel, Markdown tables, HTML tables, YAML
-- Multi-format output: PNG, SVG, PDF
-- 5 color palettes including a colorblind-safe default (Wong 2011)
-- Statistical annotations: trend lines, R², confidence bands
-- Preview grid for comparing multiple charts
-
-## Quick Start
+## Quick start
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Parse input data
-python scripts/parse_input.py data.xlsx clean_data.csv
-
-# Generate a chart
-python scripts/generate_chart.py clean_data.csv chart.png --type bar --x category --y value --title "My Chart"
-
-# Detect anomalies (optional)
-python scripts/detect_highlights.py clean_data.csv highlights.json --column value
-
-# Re-generate with highlights
-python scripts/generate_chart.py clean_data.csv chart.png --type line --x date --y value --highlights highlights.json
-
-# Create a review grid of multiple charts
-python scripts/preview_grid.py chart1.png chart2.png chart3.png grid.png --cols 3
+pip install -r requirements.txt            # Python 3.10+
+python scripts/parse_input.py data.xlsx clean.csv
+python scripts/generate_chart.py clean.csv chart.png --type bar --x product --y revenue --title "Revenue"
+python scripts/detect_highlights.py clean.csv hl.json --column revenue
+python scripts/generate_chart.py clean.csv line.png --type line --x date --y revenue --highlights hl.json
+python scripts/preview_grid.py chart.png line.png grid.png --cols 2
+python examples/build.py                   # example charts in examples/out/
 ```
 
-## File Structure
+For slides: `--theme editorial --preset slide --figsize 5.6 3.2` (size = the slide slot, in inches), then reference the PNG from a `pptx-enhanced` `panels` slide.
+
+## Layout
 
 ```
-dataviz-enhanced/
-├── SKILL.md                    # Full skill documentation
-├── README.md                   # This file
-├── default-viz-config.json     # Theme, palettes, chart defaults
-├── requirements.txt            # Python dependencies
-└── scripts/
-    ├── parse_input.py          # Data file → normalized CSV/JSON
-    ├── generate_chart.py       # Data → chart (SVG/PNG/PDF)
-    ├── detect_highlights.py    # Anomaly detection → highlights JSON
-    └── preview_grid.py         # Multiple images → review grid
+SKILL.md                    skill entry (workflow, chart table, options)
+default-viz-config.json     themes, presets, palettes, chart defaults, highlight styles
+requirements.txt
+scripts/generate_chart.py   chart engine (Altair)
+scripts/parse_input.py      files to clean CSV/JSON
+scripts/dataio.py           shared loading helpers (delimiters, numeric cleanup)
+scripts/detect_highlights.py  anomaly detection
+scripts/preview_grid.py     contact sheet of several charts
+examples/                   data, build.py, output charts, demo deck spec
 ```
 
-## Color Palettes
-
-| Name | Colors | Use Case |
-|------|--------|----------|
-| `colorblind` | Wong (2011) 8-color | Default — accessible |
-| `sequential` | Blue gradient | Ordered data |
-| `diverging` | Red ↔ Blue | Data with midpoint |
-| `categorical` | High contrast | Nominal categories |
-| `monochrome` | Grayscale | Print-friendly |
-
-## Workflow
-
-1. **Parse** structured data with `parse_input.py`
-2. **Generate** chart with `generate_chart.py`
-3. **Detect** anomalies with `detect_highlights.py` (optional)
-4. **Re-generate** chart with `--highlights` flag (optional)
-5. **Review** multiple charts with `preview_grid.py` (optional)
-
-See [SKILL.md](SKILL.md) for full documentation, all CLI options, and chart type examples.
-
-## License
-
-MIT
+MIT licensed.
