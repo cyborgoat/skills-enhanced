@@ -1,0 +1,115 @@
+{
+  "root": "<py-lib>",
+  "commands": [
+    {
+      "cmd": "pip install .",
+      "kind": "install",
+      "source": "pyproject.toml"
+    },
+    {
+      "cmd": "pip install -e \".[dev]\"",
+      "kind": "setup-dev",
+      "source": "pyproject.toml [project.optional-dependencies]"
+    },
+    {
+      "cmd": "python -m pytest",
+      "kind": "test",
+      "source": "tests/"
+    }
+  ],
+  "runtime": {
+    "python": ">=3.9"
+  },
+  "generated_by": "inspect_project.py",
+  "name": "textstats",
+  "description": "Count words, sentences and reading time in plain text.",
+  "version": "0.3.1",
+  "license_declared": "MIT",
+  "ecosystems": [
+    {
+      "ecosystem": "python",
+      "deps": [],
+      "scripts": {}
+    }
+  ],
+  "repo": {
+    "owner": "acme",
+    "name": "py-lib",
+    "url": "https://github.com/acme/py-lib",
+    "default_branch": null,
+    "latest_tag": null,
+    "subdir": ""
+  },
+  "license": {
+    "file": "LICENSE",
+    "spdx": "MIT",
+    "holder": "Acme Labs",
+    "year": "2026",
+    "inherited_from_repo_root": false
+  },
+  "ci": [
+    {
+      "file": ".github/workflows/ci.yml",
+      "name": "CI",
+      "provider": "github-actions"
+    }
+  ],
+  "languages": [
+    {
+      "language": "Python",
+      "files": 2,
+      "share": 1.0
+    }
+  ],
+  "tree": [
+    {
+      "path": ".github/",
+      "children": [
+        "workflows/"
+      ]
+    },
+    {
+      "path": "src/",
+      "children": [
+        "textstats/"
+      ]
+    },
+    {
+      "path": "tests/",
+      "children": [
+        "test_basic.py"
+      ]
+    },
+    {
+      "path": "LICENSE",
+      "children": []
+    },
+    {
+      "path": "pyproject.toml",
+      "children": []
+    }
+  ],
+  "env_vars": [],
+  "config_files": [],
+  "script_files": [],
+  "packages": [],
+  "readme": {
+    "exists": false
+  },
+  "companion": {
+    "license": true,
+    "contributing": false,
+    "code_of_conduct": false,
+    "security": false,
+    "changelog": false,
+    "issue_templates": false
+  },
+  "has": {
+    "tests": true,
+    "docs": false,
+    "examples": false,
+    "docker": false
+  },
+  "project_type": "library",
+  "file_count": 5
+}

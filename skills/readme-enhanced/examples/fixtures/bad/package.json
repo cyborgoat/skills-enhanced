@@ -1,0 +1,1 @@
+{ "name": "bad-demo", "version": "0.1.0", "description": "A demo project with a deliberately bad README.", "scripts": { "test": "node --test", "build": "node build.js" }, "dependencies": { "express": "^4.18.0" }, "license": "MIT" }

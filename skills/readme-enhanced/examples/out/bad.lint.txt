@@ -1,0 +1,33 @@
+README.md:1: error [description] no description paragraph within 18 lines of the top
+README.md:1: error [section] missing a 'Usage' section (required by style 'standard')
+README.md:1: info  [companion-suggest] no CHANGELOG file; consider adding one (offer to write it)
+README.md:3: warn  [title] 2 H1 headings; use one
+README.md:5: error [badge-slug] badge points at other/thing but the repository is acme/bad-demo
+README.md:5: warn  [badge-count] 6 badges; style 'standard' allows 5. Keep only the ones a reader acts on
+README.md:6: error [badge-slug] badge points at other/thing but the repository is acme/bad-demo
+README.md:6: warn  [badge-duplicate] badge repeated (first on line 5)
+README.md:9: error [placeholder] leftover placeholder: '<!-- ASK'
+README.md:13: warn  [fence-lang] code block has no language tag
+README.md:13: info  [prompt] every command starts with '$ '; leaving it out makes the block copy-pasteable
+README.md:14: error [placeholder] leftover placeholder: 'yourusername'
+README.md:14: warn  [command] git clone points at yourusername/bad-demo but this repository is acme/bad-demo
+README.md:17: error [command] 'npm run deploy': package.json has no script 'deploy'
+README.md:18: error [command] 'pip install -r requirements-dev.txt' but there is no requirements-dev.txt in .
+README.md:19: error [command] 'make release' but there is no Makefile in .
+README.md:20: error [command] 'python tools/missing.py' but there is no tools/missing.py in .
+README.md:23: error [link-missing] link target not found: docs/missing.md
+README.md:23: error [anchor] link '#usage-guide' matches no heading
+README.md:25: error [image-missing] image target not found: assets/screenshot.png
+README.md:26: error [image-missing] image target not found: docs/shot.png
+README.md:26: warn  [image-alt] image docs/shot.png has no alt text
+README.md:28: error [placeholder] leftover placeholder: 'TODO'
+README.md:28: warn  [stale-claim] 'Redux' appears in the README but nowhere else in the project; remove it or check it is still true
+README.md:28: warn  [stale-claim] 'GraphQL' appears in the README but nowhere else in the project; remove it or check it is still true
+README.md:30: warn  [heading-level] heading jumps from H2 to H4: 'Deep heading'
+README.md:32: warn  [companion-missing] README refers to CONTRIBUTING but the project has no such file
+README.md:32: warn  [stale-claim] 'lodash-fp' appears in the README but nowhere else in the project; remove it or check it is still true
+README.md:32: warn  [stale-file] `src/nowhere.js` is referenced but no such file exists in the project
+README.md:34: warn  [license-mismatch] README says Apache-2.0 but the project's licence is MIT
+README.md:38: error [fence] code fence is never closed
+
+16 error(s), 13 warning(s), 2 note(s) (standard style)

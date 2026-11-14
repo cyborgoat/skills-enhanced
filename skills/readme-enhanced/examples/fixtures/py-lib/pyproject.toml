@@ -1,0 +1,10 @@
+[project]
+name = "textstats"
+version = "0.3.1"
+description = "Count words, sentences and reading time in plain text."
+requires-python = ">=3.9"
+license = "MIT"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest"]
