@@ -31,4 +31,4 @@ examples/                     fixtures, finished READMEs, a deliberately bad REA
 
 ## License
 
-Released under the [MIT License](../LICENSE).
+Released under the [MIT License](LICENSE).

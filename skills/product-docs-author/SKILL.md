@@ -1,6 +1,8 @@
 ---
 name: product-docs-author
 description: Use this skill when creating, updating, reviewing, or validating product documentation. It covers product doc folder layout, route mapping, frontmatter, root and subpage structure, navigation expectations, and the bilingual technical writing style used by the repository.
+license: MIT
+compatibility: Designed for core-web product documentation conventions. Requires access to the target documentation repository; no runtime packages required.
 ---
 
 # Product Docs Author
@@ -8,6 +10,8 @@ description: Use this skill when creating, updating, reviewing, or validating pr
 ## Overview
 
 Use this skill to draft or revise product documentation for the `core-web` repository. It encodes the conventions from `docs/content-authoring/products.md` and observed examples in `data/products`.
+
+These source paths refer to the target documentation repository, not this installed skill. If they are absent, inspect the target repository's authoring guide, routing, and existing pages first. Confirm the intended layout with the user before applying core-web-specific route conventions to another project.
 
 Before changing content, read the relevant existing product files so the new page matches that product/version's terminology, language, and navigation depth.
 

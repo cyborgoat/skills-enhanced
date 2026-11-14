@@ -95,4 +95,7 @@ tmp/
 # Workspace
 workspace/
 # Generated reports about other skills (stale as soon as those READMEs change)
-readme-enhanced/examples/out/real/
+skills/readme-enhanced/examples/out/real/
+
+# Office lock files
+~$*

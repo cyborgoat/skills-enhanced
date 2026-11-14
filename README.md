@@ -1,166 +1,142 @@
-# Enhanced Claude Skills
+# Enhanced Agent Skills
 
-A collection of enhanced Claude skills that extend Claude's capabilities with specialized workflows, tools, and integrations.
+A library of [Agent Skills](https://agentskills.io) for Claude Code, Codex, and other compatible coding agents. Install individual skills directly from GitHub with the [Skills CLI](https://github.com/vercel-labs/skills).
 
-## About This Repository
+## Install
 
-This repository contains custom Claude skills that can be installed in your `.claude/skills/` directory to give Claude additional capabilities. Each skill is a self-contained package with its own dependencies, scripts, and documentation.
+With Node.js and npm installed, run this from your project:
 
-## Available Skills
-
-### 🎨 [Enhanced PowerPoint Generator](./pptx-enhanced/)
-
-Generate professional PowerPoint presentations with a modern tech-blueprint visual style featuring deep teal headers, warm amber accents, and clean editorial layouts.
-
-**Features:**
-- Modern tech-blueprint theme with configurable colors and fonts
-- HTML-to-PPTX conversion workflow
-- SVG diagram generation and multi-format image support (SVG, PNG, JPG, GIF)
-- Animated GIF generation using Manim Community Edition for instructional visuals
-- Multiple slide layout templates (title, content, comparison, timeline, process flow, architecture)
-- Automated slide thumbnail generation for validation
-- Text inventory extraction from presentations
-
-**Technologies:** Node.js (Playwright, PptxGenJS), Python (python-pptx, Manim, Pillow, Poppler)
-
-### 📊 [Data Visualization Generator](./dataviz-enhanced/)
-
-Generate publication-quality, Tufte-inspired data visualizations with optional anomaly highlighting from structured data (CSV, JSON, Excel) or unstructured text.
-
-**Features:**
-- 13 chart types: line, bar, hbar, scatter, histogram, heatmap, box, pie, donut, area, bubble, timeseries, small multiples
-- Tufte-inspired minimal styling with colorblind-safe default palette (Wong 2011)
-- Anomaly detection (Z-score, IQR, min/max, changepoint) with visual highlight overlays
-- Multi-format input (CSV, TSV, JSON, Excel, Markdown tables, HTML tables, YAML) and output (PNG, SVG, PDF)
-- Statistical annotations: trend lines, R², confidence bands
-- Preview grid for comparing multiple charts side-by-side
-
-**Technologies:** Python (matplotlib, seaborn, pandas, scipy, Pillow)
-
-### 📝 [README Writer](./readme-enhanced/)
-
-Write or improve the README of an open-source project from verified facts: inspect the repository, draft a README in a chosen style, and lint it before it ships.
-
-**Features:**
-- Repository inspection (manifests, scripts, licence, CI, structure) that records the source file of every fact
-- Three styles (minimal, standard, comprehensive) and nine project types; anything only a human can say becomes an explicit `<!-- ASK -->` marker
-- Linter for links and anchors, code fences, leftover placeholders, commands that do not exist in the project, badges, licence consistency and stale claims
-
-**Technologies:** Python 3.9+ (standard library only)
-
-## Installation
-
-### Quick Start
-
-1. Clone this repository:
 ```bash
-git clone <repository-url> skills-enhanced
-cd skills-enhanced
+npx skills add cyborgoat/skills-enhanced
 ```
 
-2. Choose a skill and navigate to its folder:
+Choose the skills and coding agents interactively. To browse without installing:
+
 ```bash
-cd pptx-enhanced
+npx skills add cyborgoat/skills-enhanced --list
 ```
 
-3. Install dependencies:
+Install a specific skill:
+
 ```bash
-# Node.js dependencies
+npx skills add cyborgoat/skills-enhanced --skill pptx-enhanced
+npx skills add cyborgoat/skills-enhanced --skill dataviz-enhanced
+npx skills add cyborgoat/skills-enhanced --skill readme-enhanced
+npx skills add cyborgoat/skills-enhanced --skill product-docs-author
+```
+
+Installation defaults to the current project. Use `-g` for availability across projects, `-a` to select an agent, and `-y` to skip confirmation prompts:
+
+```bash
+# Global installation for Claude Code
+npx skills add cyborgoat/skills-enhanced --skill pptx-enhanced -a claude-code -g -y
+
+# Project installation for Codex
+npx skills add cyborgoat/skills-enhanced --skill dataviz-enhanced -a codex -y
+```
+
+The CLI installs instructions and bundled files. It does not install runtime dependencies. Follow the selected skill's setup instructions below, running dependency commands from the installed skill directory. No npm publishing or manual download is required.
+
+## Available skills
+
+| Skill | Purpose | Runtime requirements |
+| --- | --- | --- |
+| [pptx-enhanced](skills/pptx-enhanced/) | Editable PowerPoint decks from JSON or HTML, charts, tables, technical diagrams, and insight reports | Node.js 22+, Python 3.10+ for validation; Chromium for HTML workflows; LibreOffice and Poppler for optional thumbnails |
+| [dataviz-enhanced](skills/dataviz-enhanced/) | Altair charts from tabular data, anomaly highlighting, PNG/SVG/PDF and interactive HTML | Python 3.10+ and its bundled requirements |
+| [readme-enhanced](skills/readme-enhanced/) | Write and lint open-source READMEs from verified repository facts | Python 3.9+ (standard library only) |
+| [product-docs-author](skills/product-docs-author/) | Product documentation structure, routing, frontmatter, and bilingual writing conventions | A target documentation repository; designed for `core-web` conventions |
+
+### PowerPoint setup
+
+From the installed `pptx-enhanced` directory:
+
+```bash
 npm install
+python3 -m pip install -r requirements.txt
+
+# For HTML slides and browser-based rendering
 npm run install-browsers
 
-# Python dependencies
-pip install -r requirements.txt
-
-# System dependencies (macOS)
+# Optional thumbnail dependencies on macOS
 brew install libreoffice poppler
 ```
 
-4. Copy the skill to your Claude skills directory:
+See the [skill README](skills/pptx-enhanced/README.md) for examples and validation.
+
+### Data visualization setup
+
+From the installed `dataviz-enhanced` directory, using your Python environment:
+
 ```bash
-# From the skill folder
-cp -r ../pptx-enhanced ~/.claude/skills/
+python3 -m pip install -r requirements.txt
 ```
 
-### Alternative: Direct Installation
+See the [skill README](skills/dataviz-enhanced/README.md) for chart examples. No browser installation is required.
 
-You can also copy individual skill folders directly to your `~/.claude/skills/` directory and install dependencies there.
+### README writer setup
 
-## Usage
+No runtime dependencies beyond Python 3.9+. See the [skill README](skills/readme-enhanced/README.md) for the inspect, scaffold and lint workflow.
 
-Once installed, simply invoke the skill in Claude Code:
+### Product documentation setup
 
-- `/pptx-enhanced Create a PowerPoint presentation about cloud architecture`
-- `/pptx-enhanced Generate slides for technical documentation`
-- `/dataviz-enhanced Create a bar chart of quarterly revenue from this CSV`
-- `/dataviz-enhanced Visualize the outliers in this sales data`
+No runtime dependencies. Read the [skill README](skills/product-docs-author/README.md) for the expected target repository layout and how to adapt it to another documentation project.
 
-Each skill's README or SKILL.md contains detailed usage instructions and capabilities.
+## Use
 
-## Repository Structure
+Ask your coding agent to use the installed skill. In Claude Code, for example:
 
+```text
+/pptx-enhanced Create a presentation about cloud architecture
+/dataviz-enhanced Create a bar chart of quarterly revenue from this CSV
+/readme-enhanced Write a README for this repository
+/product-docs-author Review the product documentation structure and frontmatter
 ```
+
+Invocation varies by agent; each `SKILL.md` contains the workflow and references.
+
+## Update or remove
+
+```bash
+npx skills check
+npx skills update
+npx skills remove pptx-enhanced
+```
+
+## Repository layout
+
+```text
 skills-enhanced/
-├── README.md                      # This file
-├── LICENSE                        # License file
-├── .gitignore                     # Git ignore patterns
-├── pptx-enhanced/                 # PowerPoint generation skill
-│   ├── SKILL.md                   # Skill documentation
-│   ├── README.md                  # Skill README
-│   ├── package.json               # Node.js dependencies
-│   ├── requirements.txt           # Python dependencies
-│   ├── default-pptx-config.json   # Theme configuration
-│   ├── html2pptx.md               # HTML slide creation rules
-│   └── scripts/                   # Utility scripts
-│       ├── html2pptx.js           # HTML to PowerPoint converter
-│       ├── thumbnail.py           # Slide thumbnail generator
-│       └── inventory.py           # Text inventory extractor
-└── dataviz-enhanced/              # Data visualization skill
-    ├── SKILL.md                   # Skill documentation
-    ├── README.md                  # Skill README
-    ├── requirements.txt           # Python dependencies
-    ├── default-viz-config.json    # Theme, palettes, chart defaults
-    └── scripts/                   # Utility scripts
-        ├── parse_input.py         # Data file → normalized CSV/JSON
-        ├── generate_chart.py      # Data → chart (SVG/PNG/PDF)
-        ├── detect_highlights.py   # Anomaly detection → highlights JSON
-        └── preview_grid.py        # Multiple images → review grid
+├── README.md
+├── CONTRIBUTING.md
+├── LICENSE
+└── skills/
+    ├── pptx-enhanced/
+    │   ├── SKILL.md
+    │   ├── LICENSE
+    │   ├── README.md
+    │   ├── scripts/
+    │   ├── references/
+    │   └── examples/
+    ├── dataviz-enhanced/
+    │   ├── SKILL.md
+    │   ├── LICENSE
+    │   ├── README.md
+    │   ├── scripts/
+    │   └── examples/
+    ├── readme-enhanced/
+    │   ├── SKILL.md
+    │   ├── LICENSE
+    │   ├── README.md
+    │   ├── scripts/
+    │   └── references/
+    └── product-docs-author/
+        ├── SKILL.md
+        ├── LICENSE
+        └── README.md
 ```
 
-## Contributing
-
-Each skill should be:
-- **Self-contained**: Include all necessary dependencies and scripts
-- **Well-documented**: Provide clear setup and usage instructions
-- **Tested**: Ensure all scripts and workflows function correctly
-- **Configurable**: Use JSON or configuration files for customization
-
-## Requirements
-
-- **Node.js**: v16+ (for skills using JavaScript/TypeScript)
-- **Python**: 3.8+ (for skills using Python)
-- **Claude Desktop**: Latest version with skills support
-- **System Dependencies** (for pptx-enhanced):
-  - **LibreOffice**: For PPTX generation and manipulation
-  - **Poppler**: For PDF processing and conversion
-  - **Playwright Chromium**: Installed via `npm run install-browsers`
+Each directory under `skills/` is independently installable. See [CONTRIBUTING.md](CONTRIBUTING.md) for authoring and installation checks.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details
-
-## Skills Development
-
-### Current
-- [x] Enhanced PowerPoint Generator (pptx-enhanced) - Modern tech-blueprint theme with SVG and animated GIF support
-
-### Roadmap
-- [ ] Document analyzer and summarizer
-- [x] Data Visualization Generator (dataviz-enhanced) - Tufte-inspired charts with anomaly highlighting
-- [ ] Code documentation generator
-- [ ] Meeting notes formatter
-- [ ] Presentation content optimizer
-
----
-
-**Note**: These are custom skills developed independently and are not officially affiliated with Anthropic.
+[MIT](LICENSE). Each skill bundles a copy of the license so it is included in standalone installations. This project is independently maintained and is not affiliated with coding agent vendors.

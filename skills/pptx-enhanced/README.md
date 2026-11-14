@@ -9,10 +9,18 @@ Claude Code skill that builds compact, editable PowerPoint decks in an **Editori
 - **Native charts and tables**, auto-fitted text so slides stay full rather than bulky.
 - Escape hatch to hand-written HTML slides (`html2pptx`) and raw PptxGenJS.
 
-## Setup
+## Install
 
 ```bash
-cd pptx-enhanced
+npx skills add cyborgoat/skills-enhanced --skill pptx-enhanced
+```
+
+## Setup
+
+Use Node.js 22+ and Python 3.10+.
+
+```bash
+# Run from the installed skill directory (skills/pptx-enhanced in this repository)
 npm install && npm run install-browsers
 pip install -r requirements.txt
 brew install libreoffice poppler   # optional: thumbnail validation
