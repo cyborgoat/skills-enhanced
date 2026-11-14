@@ -1,0 +1,36 @@
+name: Validate skills
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m pip install PyYAML
+      - run: python scripts/validate-skills.py
+      - name: Verify CLI discovery
+        run: npx --yes skills add . --list
+      - name: Verify standalone installation
+        shell: bash
+        run: |
+          install_check_dir=$(mktemp -d)
+          cd "$install_check_dir"
+          npx --yes skills add "$GITHUB_WORKSPACE" --skill '*' -a claude-code -y
+          for skill in pptx-enhanced dataviz-enhanced product-docs-author; do
+            test -f ".claude/skills/$skill/SKILL.md"
+            test -f ".claude/skills/$skill/LICENSE"
+          done
+          test -f .claude/skills/pptx-enhanced/scripts/build-deck.js
+          test -f .claude/skills/dataviz-enhanced/scripts/generate_chart.py

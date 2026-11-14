@@ -1,7 +1,8 @@
 ---
 name: pptx-enhanced
 description: Build compact, polished .pptx decks from a JSON spec or HTML slides, at low, medium or high information density. Covers KPI/chart slides, tables, product comparison matrices, pros/cons evaluations, pricing, timelines, mixed-content panel pages, Tech Insight report pages (summary, landscape, deep dive, benchmark, scorecard, risk matrix), and technical diagrams (UML class, sequence, ER, state, architecture) as editable native shapes or Mermaid images. Use for any request to create or restyle a PowerPoint, deck, slides, or an insight/research report in slide form.
-license: Complete terms in LICENSE
+license: MIT
+compatibility: Requires Node.js 22+. Python 3.10+ for validation utilities; Chromium for HTML workflows; LibreOffice and Poppler for optional thumbnails. Mermaid rendering may require network access.
 ---
 
 # pptx-enhanced
@@ -58,8 +59,10 @@ Every slide accepts `title`, `subtitle`, `notes` (speaker notes), `density` (ove
 
 ## Setup
 
+Run these commands from this skill's installed directory. Node.js 22+ and Python 3.10+ are recommended.
+
 ```bash
-cd pptx-enhanced && npm install && npm run install-browsers && pip install -r requirements.txt
+npm install && npm run install-browsers && pip install -r requirements.txt
 brew install libreoffice poppler   # optional, for thumbnails
 ```
 

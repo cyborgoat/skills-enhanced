@@ -8,7 +8,15 @@ Claude Code skill that turns data into clean, publication-quality charts. Built 
 - Input: CSV/TSV (delimiter and decimal-comma detection), JSON, Excel, YAML, Markdown and HTML tables; `1,200` / `1.2%` / `$3.1` become numbers
 - Data reduction for big data: `--top`, `--agg --groupby`, `--max-categories`
 
+## Install
+
+```bash
+npx skills add cyborgoat/skills-enhanced --skill dataviz-enhanced
+```
+
 ## Quick start
+
+Run from the installed skill directory using your Python environment.
 
 ```bash
 pip install -r requirements.txt            # Python 3.10+

@@ -1,7 +1,8 @@
 ---
 name: dataviz-enhanced
 description: Turn tabular data (CSV, TSV, JSON, Excel, YAML, Markdown/HTML tables) into clean, publication-quality charts, with anomaly detection and highlighting. Use when asked to chart, plot or visualize data, compare series, find outliers or trends, or make charts for a report or slide deck. Built on Altair (Vega-Lite); outputs PNG, SVG, PDF, interactive HTML, or the Vega-Lite JSON spec.
-license: Complete terms in LICENSE
+license: MIT
+compatibility: Requires Python 3.10+ and packages listed in requirements.txt. No browser installation required.
 ---
 
 # dataviz-enhanced
@@ -10,8 +11,10 @@ Minimal-ink charts (Tufte-style) with one emphasis colour, direct value labels a
 
 ## Setup
 
+Run from this skill's directory.
+
 ```bash
-pip install -r dataviz-enhanced/requirements.txt   # Python 3.10+; no browser or system libraries needed
+pip install -r requirements.txt   # Python 3.10+; no browser or system libraries needed
 ```
 
 ## Workflow
